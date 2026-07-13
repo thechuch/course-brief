@@ -191,7 +191,83 @@
   .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:12px 19px;border-radius:999px;opacity:0;transition:.3s;z-index:40;box-shadow:0 14px 34px -8px rgba(0,0,0,.5);display:flex;align-items:center;gap:9px}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast .tk{color:var(--flare)}
-  @media(max-width:920px){ nav.rail{display:none} main{padding:26px 22px 90px} .footnav{left:0;padding:13px 22px} .fb{grid-template-columns:1fr} .welcome .compare{grid-template-columns:1fr} }
+  /* header left + burger (desktop: burger hidden) */
+  .hleft{display:flex;align-items:center;gap:14px}
+  .burger{display:none;width:38px;height:38px;border:none;background:none;cursor:pointer;position:relative;flex:none;border-radius:10px;-webkit-tap-highlight-color:transparent}
+  .burger span{position:absolute;left:9px;right:9px;height:1.7px;background:var(--white);border-radius:2px;transition:transform .34s cubic-bezier(.5,.15,.2,1),opacity .2s;transform-origin:center}
+  .burger span:nth-child(1){top:13px} .burger span:nth-child(2){top:18.5px} .burger span:nth-child(3){top:24px}
+  body.menuopen .burger span:nth-child(1){top:18.5px;transform:rotate(45deg)}
+  body.menuopen .burger span:nth-child(2){opacity:0;transform:translateX(-6px)}
+  body.menuopen .burger span:nth-child(3){top:18.5px;transform:rotate(-45deg)}
+  #scrim{display:none;position:fixed;inset:56px 0 0 0;background:rgba(0,0,0,.42);opacity:0;pointer-events:none;transition:opacity .35s;z-index:45;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  body.menuopen #scrim{opacity:1;pointer-events:auto}
+  #mprog{display:none;position:absolute;left:0;right:0;bottom:-1px;height:2.5px;background:rgba(255,255,255,.13)}
+  #mprog i{display:block;height:100%;width:0;background:var(--grad);transition:width .55s cubic-bezier(.2,.7,.2,1)}
+
+  /* entrance + press micro-animations */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(11px)}to{opacity:1;transform:none}}
+  #main.stepin>*{animation:fadeUp .5s both}
+  #main.stepin>*:nth-child(2){animation-delay:.045s}
+  #main.stepin>*:nth-child(3){animation-delay:.09s}
+  #main.stepin>*:nth-child(4){animation-delay:.135s}
+  #main.stepin>*:nth-child(5){animation-delay:.18s}
+  #main.stepin>*:nth-child(6){animation-delay:.225s}
+  #main.stepin>*:nth-child(7){animation-delay:.27s}
+  #main.stepin>*:nth-child(n+8){animation-delay:.31s}
+  .btn:active{transform:scale(.97)} .segbtn:active{transform:scale(.96)} .step:active{transform:scale(.99)}
+  .why.open .whytip{opacity:1;transform:translateY(0);pointer-events:auto}
+  @media(prefers-reduced-motion:reduce){ #main.stepin>*{animation:none} .burger span,nav.rail,#scrim,#gate,.field,.prod{transition:none} }
+
+  /* ---------- tablet / mobile ---------- */
+  @media(max-width:920px){
+    header{z-index:50}
+    .burger{display:block}
+    .topright .saved{display:none}
+    nav.rail{position:fixed;top:56px;left:0;height:calc(100svh - 56px);width:min(87vw,336px);transform:translateX(-101%);transition:transform .42s cubic-bezier(.22,.61,.21,1);z-index:46;box-shadow:14px 0 60px -14px rgba(0,0,0,.5);overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:36px}
+    body.menuopen nav.rail{transform:none}
+    body.menuopen{overflow:hidden}
+    #scrim{display:block}
+    #mprog{display:block}
+    main{padding:28px 24px 100px;max-width:none}
+    .footnav{left:0;right:0;padding:12px 24px;max-width:none;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+    .fb{grid-template-columns:1fr}
+    .welcome .compare{grid-template-columns:1fr}
+    .welcome .stat{flex-wrap:wrap;gap:20px 34px}
+  }
+  /* ---------- phone ---------- */
+  @media(max-width:640px){
+    header{height:56px;padding:0 15px}
+    .brandlockup{gap:10px}
+    .brandlockup .sep,.brandlockup .doc,.brandlockup .tag{display:none}
+    .brandlockup .nm{font-size:12.5px;letter-spacing:.2em}
+    .pct .bar,.pctlbl{display:none}
+    .pct{gap:0}
+    .eyebrow{font-size:10.5px}
+    h1{font-size:23px;margin:10px 0 6px}
+    .lead{font-size:15px}
+    main{padding:22px 16px 100px}
+    .sechint{padding:12px 14px;font-size:13px;border-radius:11px}
+    .field{padding:16px 16px;border-radius:14px}
+    .field input[type=text],.field textarea,.field select{font-size:16px;padding:12px 13px}
+    .fhead{flex-wrap:wrap;gap:8px}
+    .frow{gap:8px}
+    .btn{padding:11px 16px;font-size:13px} .btn.sm{padding:9px 14px}
+    .prod{grid-template-columns:92px 1fr;gap:14px;padding:16px;border-radius:14px}
+    .pshot{width:92px;height:130px}
+    .pname{font-size:16px}
+    .roletag{flex-wrap:wrap}
+    .why .whytip{left:auto;right:-2px;width:min(74vw,244px)}
+    .fb{gap:12px}
+    .tlitem{padding:14px 15px}
+    .marks .mark{font-size:12.5px;padding:8px 14px}
+    .footnav .hint{display:none}
+    .footnav{justify-content:space-between}
+    .toast{bottom:90px;font-size:12.5px}
+    .welcome .stat{padding:18px 20px;gap:16px 30px}
+    .stat .s b{font-size:22px}
+    .wcard{padding:20px}
+    #gate input{width:200px}
+  }
 
   /* passcode gate (deterrent only) */
   #gate{position:fixed;inset:0;z-index:1000;background:radial-gradient(circle at 50% 42%,#17130c 0%,#000 62%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .45s}
@@ -217,19 +293,24 @@
   <div class="ghint">Small Circle internal · shared link</div>
 </div>
 <header>
-  <div class="brandlockup">
-    <span class="eclipse"></span>
-    <span class="nm">SMALL CIRCLE</span>
-    <span class="sep">·</span>
-    <span class="doc">Course Brief</span>
-    <span class="tag" id="brandtag">TOTALITY</span>
+  <div class="hleft">
+    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <div class="brandlockup">
+      <span class="eclipse"></span>
+      <span class="nm">SMALL CIRCLE</span>
+      <span class="sep">·</span>
+      <span class="doc">Course Brief</span>
+      <span class="tag" id="brandtag">TOTALITY</span>
+    </div>
   </div>
   <div class="topright">
     <div class="saved"><span class="dot"></span> Saved just now</div>
-    <div class="pct"><div class="bar"><i id="topbar"></i></div><b id="toppct">0%</b> complete</div>
+    <div class="pct"><div class="bar"><i id="topbar"></i></div><b id="toppct">0%</b> <span class="pctlbl">complete</span></div>
   </div>
+  <div id="mprog"><i id="mprogi"></i></div>
 </header>
 
+<div id="scrim"></div>
 <div class="shell">
   <nav class="rail" id="rail"></nav>
   <main id="main"></main>
@@ -307,6 +388,7 @@ const brief = {
 
 // ---------- State ----------
 let cur = 0;
+let lastStep = -1;
 const stepEl = {};
 
 // completeness: count confirmable items across all steps
@@ -387,6 +469,7 @@ function render(){
   rh+=`<div class="railmeter"><div class="rm-t"><span>Brief completeness</span><b>${t.pct}%</b></div><div class="rm-b"><i style="width:${t.pct}%"></i></div><div class="rm-n">${t.done} of ${t.total} items confirmed · the rest is on us</div></div>`;
   document.getElementById('rail').innerHTML=rh;
   document.getElementById('topbar').style.width=t.pct+'%';
+  document.getElementById('mprogi').style.width=t.pct+'%';
   document.getElementById('toppct').textContent=t.pct+'%';
 
   // main
@@ -403,7 +486,9 @@ function render(){
     else if(s.kind==='stub') m+=`<div class="internalbox"><div class="lbl">Pre-filled · in this build we stubbed the detail</div><p style="margin-top:10px;color:var(--sub);font-size:14px">${s.stubnote}</p></div>`;
     else if(s.kind==='exam') m+=examHTML();
   }
-  document.getElementById('main').innerHTML=m;
+  const mainEl=document.getElementById('main');
+  mainEl.innerHTML=m;
+  if(cur!==lastStep){ mainEl.classList.remove('stepin'); void mainEl.offsetWidth; mainEl.classList.add('stepin'); lastStep=cur; }
 
   document.getElementById('backbtn').style.visibility= cur===0?'hidden':'visible';
   const last = cur===brief.steps.length-1;
@@ -495,7 +580,7 @@ function getField(ref){ const [ctx,idx]=ref.split(':'); const s=brief.steps[cur]
   if(ctx==='awards') return s.awards; return null; }
 
 document.addEventListener('click',e=>{
-  const go=e.target.closest('[data-go]'); if(go){ cur=+go.dataset.go; render(); return; }
+  const go=e.target.closest('[data-go]'); if(go){ cur=+go.dataset.go; closeMenu(); render(); return; }
   const c=e.target.closest('[data-confirm]'); if(c){ getField(c.dataset.confirm).state='confirmed'; toast('Confirmed'); render(); return; }
   const u=e.target.closest('[data-unconfirm]'); if(u){ getField(u.dataset.unconfirm).state='review'; render(); return; }
   const fo=e.target.closest('[data-focus]'); if(fo){ const el=document.querySelector(`[data-edit="${fo.dataset.focus}"]`); if(el){el.focus();} return; }
@@ -512,11 +597,24 @@ document.addEventListener('change',e=>{ const r=e.target.closest('[data-role]');
 document.getElementById('backbtn').onclick=()=>{ if(cur>0){cur--;render();} };
 document.getElementById('nextbtn').onclick=()=>{ if(cur<brief.steps.length-1){cur++;render();} else { toast('Brief submitted — we start building'); } };
 
+// ---------- mobile menu ----------
+const burger=document.getElementById('burger'), scrim=document.getElementById('scrim');
+function closeMenu(){ document.body.classList.remove('menuopen'); burger.setAttribute('aria-expanded','false'); }
+burger.addEventListener('click',()=>{ const open=document.body.classList.toggle('menuopen'); burger.setAttribute('aria-expanded',open); });
+scrim.addEventListener('click',closeMenu);
+addEventListener('keydown',e=>{ if(e.key==='Escape') closeMenu(); });
+// tap-to-reveal "why we ask" tooltips (touch)
+document.addEventListener('click',e=>{
+  const w=e.target.closest('.why');
+  document.querySelectorAll('.why.open').forEach(x=>{ if(x!==w) x.classList.remove('open'); });
+  if(w) w.classList.toggle('open');
+});
+
 render();
 
 // ---------- passcode gate (deterrent only; change PASS below) ----------
 (function(){
-  const PASS = "corona141";
+  const PASS = "smallcircle";
   const gate = document.getElementById('gate');
   if(sessionStorage.getItem('cb_ok')==='1'){ gate.style.display='none'; return; }
   function unlock(){ sessionStorage.setItem('cb_ok','1'); gate.classList.add('hidden'); setTimeout(()=>gate.style.display='none',480); }
