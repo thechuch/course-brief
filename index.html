@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Course Brief · Small Circle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Small Circle brand */
+    --ink:#000000;          /* Midnight Orbit */
+    --white:#FFFFFF;        /* Moonlight White */
+    --flare:#F1BB64;        /* Solar Flare (PMS 141 C) */
+    --flare-deep:#A9761B;   /* darkened flare for text on white */
+    --flare-wash:#FDF4E1;
+    --ink-soft:#141416; --ink2:#1C1C1E;
+    --canvas:#F6F5F1; --panel:#FFFFFF; --wash:#FBFAF7;
+    --sub:#6A6A6E; --faint:#9C9BA0;
+    --line:#E7E4DC; --line2:#F0EDE6;
+    --grad:linear-gradient(90deg,#F8EBC6,#F1BB64,#C77A2A,#5A3410);
+    --sans:'Work Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --sh:0 1px 2px rgba(0,0,0,.04),0 10px 30px -20px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:15px;font-weight:400;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.006em}
+  button{font-family:inherit;cursor:pointer;letter-spacing:inherit}
+  a{color:var(--flare-deep);text-decoration:none}
+
+  /* eclipse mark */
+  .eclipse{width:24px;height:24px;border-radius:50%;background:#000;flex:none;box-shadow:0 0 0 1.3px var(--flare), 0 0 12px 1.5px rgba(241,187,100,.6), inset 0 0 6px rgba(241,187,100,.15)}
+  .eclipse.sm{width:19px;height:19px;box-shadow:0 0 0 1.1px var(--flare),0 0 9px 1px rgba(241,187,100,.55)}
+
+  /* top bar — Midnight Orbit */
+  header{height:62px;background:var(--ink);border-bottom:1px solid #000;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:20}
+  .brandlockup{display:flex;align-items:center;gap:13px;color:var(--white)}
+  .brandlockup .nm{font-weight:500;letter-spacing:.24em;font-size:14px}
+  .brandlockup .sep{color:#59585c}
+  .brandlockup .doc{color:#A6A4A9;font-weight:400;letter-spacing:.02em}
+  .brandlockup .tag{font-size:10.5px;color:var(--flare);background:rgba(241,187,100,.14);border:1px solid rgba(241,187,100,.3);border-radius:20px;padding:3px 11px;font-weight:600;letter-spacing:.18em}
+  .topright{display:flex;align-items:center;gap:20px}
+  .saved{font-size:12px;color:#A6A4A9;display:flex;align-items:center;gap:7px;letter-spacing:.02em}
+  .saved .dot{width:6px;height:6px;border-radius:50%;background:var(--flare)}
+  .pct{font-size:12px;color:#A6A4A9;display:flex;align-items:center;gap:10px;letter-spacing:.06em}
+  .pct .bar{width:100px;height:6px;border-radius:4px;background:rgba(255,255,255,.13);overflow:hidden}
+  .pct .bar i{display:block;height:100%;background:var(--grad);width:0;transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  .pct b{color:var(--white);font-variant-numeric:tabular-nums;font-weight:600}
+
+  .shell{display:flex;min-height:calc(100vh - 62px)}
+  /* rail */
+  nav.rail{width:294px;flex:none;border-right:1px solid var(--line);padding:24px 14px;background:var(--wash)}
+  .railtitle{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);font-weight:500;padding:0 12px 14px}
+  .step{display:flex;gap:13px;align-items:flex-start;padding:11px 12px;border-radius:12px;cursor:pointer;transition:background .15s;position:relative}
+  .step:hover{background:#F1EEE7}
+  .step.active{background:var(--panel);box-shadow:var(--sh)}
+  .step.active::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--flare)}
+  .step .sd{width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;margin-top:1px;border:1.5px solid var(--line);color:var(--faint);background:#fff}
+  .step.done .sd{background:var(--ink);border-color:var(--ink);color:#fff}
+  .step.partial .sd{background:var(--flare-wash);border-color:var(--flare);color:var(--flare-deep)}
+  .step.internal .sd{background:#fff;border-color:var(--flare);color:var(--flare-deep);font-size:9.5px}
+  .step .st{font-size:14px;font-weight:500;letter-spacing:-.01em}
+  .step .ss{font-size:12px;color:var(--sub);margin-top:2px;letter-spacing:0}
+  .step.active .st{color:var(--ink)}
+  .railmeter{margin:18px 12px 0;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+  .railmeter .rm-t{font-size:12px;color:var(--sub);display:flex;justify-content:space-between;margin-bottom:9px;letter-spacing:0}
+  .railmeter .rm-t b{color:var(--ink);font-weight:600}
+  .railmeter .rm-b{height:8px;border-radius:5px;background:var(--line);overflow:hidden}
+  .railmeter .rm-b i{display:block;height:100%;background:var(--grad);width:0;transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  .railmeter .rm-n{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.4}
+
+  /* main */
+  main{flex:1;padding:38px 50px 96px;max-width:880px}
+  .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--flare-deep);font-weight:600}
+  h1{font-size:29px;font-weight:600;letter-spacing:-.03em;margin:11px 0 7px}
+  .lead{color:var(--sub);font-size:15.5px;font-weight:400;max-width:60ch}
+  .sechint{display:flex;gap:11px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--flare);border-radius:12px;padding:13px 16px;margin:22px 0 6px;font-size:13.5px;color:var(--sub)}
+  .sechint b{color:var(--ink);font-weight:600}
+  .sechint .ic{color:var(--flare-deep)}
+
+  /* field card */
+  .field{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:19px 21px;margin-top:17px;box-shadow:var(--sh);transition:border-color .2s}
+  .field.confirmed{border-color:#DAD7CF}
+  .field.needs{border-style:dashed;border-color:var(--flare);background:linear-gradient(180deg,#FFFDF7,#fff)}
+  .fhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+  .flabel{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14.5px;letter-spacing:-.01em}
+  .why{width:16px;height:16px;border-radius:50%;border:1px solid var(--line);color:var(--faint);font-size:10px;display:inline-flex;align-items:center;justify-content:center;cursor:help;position:relative;font-style:italic}
+  .why:hover .whytip{opacity:1;transform:translateY(0);pointer-events:auto}
+  .whytip{position:absolute;top:22px;left:-8px;width:252px;background:var(--ink);color:#F4F2EE;font-size:12px;font-weight:400;font-style:normal;line-height:1.45;padding:11px 13px;border-radius:10px;opacity:0;transform:translateY(-4px);transition:.18s;pointer-events:none;z-index:5;box-shadow:0 14px 34px -8px rgba(0,0,0,.5);letter-spacing:0}
+  .statepill{font-size:11px;font-weight:600;letter-spacing:.02em;padding:5px 11px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .statepill .d{width:7px;height:7px;border-radius:50%}
+  .sp-review{background:var(--flare-wash);color:var(--flare-deep)} .sp-review .d{background:var(--flare)}
+  .sp-confirmed{background:var(--ink);color:#fff} .sp-confirmed .d{background:var(--flare)}
+  .sp-needs{background:#F2F0EB;color:var(--sub);border:1px dashed var(--line)} .sp-needs .d{background:var(--faint)}
+  .source{font-size:11.5px;color:var(--faint);margin-bottom:10px;display:flex;align-items:center;gap:6px;letter-spacing:0}
+  .source svg{opacity:.7}
+  .field input[type=text],.field textarea,.field select{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:12px 14px;resize:vertical;line-height:1.55;letter-spacing:-.006em}
+  .field textarea:focus,.field input:focus,.field select:focus{outline:none;border-color:var(--ink);background:#fff}
+  .frow{display:flex;gap:9px;margin-top:13px;align-items:center;flex-wrap:wrap}
+
+  /* pill buttons — brand kit */
+  .btn{font-size:13px;font-weight:600;border-radius:999px;padding:9px 17px;border:1.4px solid var(--ink);background:#fff;color:var(--ink);transition:.16s;letter-spacing:.01em}
+  .btn:hover{background:var(--ink);color:#fff}
+  .btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .btn.pri:hover{background:var(--flare);border-color:var(--flare);color:var(--ink)}
+  .btn.ok{border-color:var(--flare);color:var(--flare-deep);background:#fff}
+  .btn.ok:hover{background:var(--flare);border-color:var(--flare);color:var(--ink)}
+  .btn.sm{padding:7px 14px;font-size:12.5px}
+  .btn.ghost{background:none;border-color:transparent;color:var(--sub)}
+  .btn.ghost:hover{color:var(--ink);background:#F1EEE8}
+
+  /* asset */
+  .asset{display:flex;gap:15px;align-items:center}
+  .assetthumb{width:88px;height:88px;border-radius:12px;flex:none;background:repeating-conic-gradient(#EFECE4 0% 25%,#F7F5F0 0% 50%) 50%/16px 16px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:11px;text-align:center;padding:6px}
+  .assetopts{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
+  .segbtn{font-size:12.5px;font-weight:600;border:1.3px solid var(--line);background:#fff;color:var(--sub);padding:8px 14px;border-radius:999px;transition:.15s}
+  .segbtn.on{background:var(--flare-wash);border-color:var(--flare);color:var(--flare-deep)}
+  .assetnote{font-size:12.5px;color:var(--sub);margin-top:9px}
+
+  /* timeline */
+  .tl{margin-top:8px}
+  .tlitem{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 17px;margin-top:12px;box-shadow:var(--sh);display:flex;gap:15px}
+  .tlitem.confirmed{border-color:#DAD7CF}
+  .tlnode{display:flex;flex-direction:column;align-items:center;flex:none;padding-top:3px}
+  .tlnode .dot{width:13px;height:13px;border-radius:50%;background:#fff;border:2px solid var(--flare)}
+  .tlitem.confirmed .tlnode .dot{background:var(--ink);border-color:var(--ink);box-shadow:0 0 0 1px var(--flare)}
+  .tlnode .line{width:2px;flex:1;background:var(--line);margin-top:5px;min-height:16px}
+  .tlbody{flex:1}
+  .tldate{font-size:12px;font-weight:700;color:var(--flare-deep);letter-spacing:.05em}
+  .tltitle{font-weight:600;font-size:15px;margin:2px 0 5px;letter-spacing:-.01em}
+  .tldesc{font-size:13.5px;color:var(--sub);line-height:1.5}
+  .tlmeta{display:flex;gap:8px;align-items:center;margin-top:11px;flex-wrap:wrap}
+  .chipmini{font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:20px;padding:4px 10px;display:inline-flex;gap:5px;align-items:center}
+  .addrow{margin-top:14px}
+
+  /* lineup product */
+  .prod{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:19px;margin-top:16px;box-shadow:var(--sh);display:grid;grid-template-columns:120px 1fr;gap:19px}
+  .prod.confirmed{border-color:#DAD7CF}
+  .pshot{width:120px;height:170px;border-radius:12px;background:repeating-conic-gradient(#EFECE4 0% 25%,#F7F5F0 0% 50%) 50%/16px 16px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--faint);font-size:11px;text-align:center;gap:8px;padding:8px}
+  .pshot .rings{width:32px;height:32px;border-radius:50%;background:#000;box-shadow:0 0 0 1px var(--flare),0 0 10px 1px rgba(241,187,100,.5);opacity:.55}
+  .phead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .pname{font-size:18px;font-weight:600;letter-spacing:-.02em}
+  .roletag{display:flex;align-items:center;gap:8px;margin:11px 0 4px}
+  .roletag label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .roletag select{width:auto;padding:6px 30px 6px 12px;font-weight:600;font-size:12.5px;color:var(--flare-deep);background:var(--flare-wash);border:1px solid var(--flare);border-radius:999px}
+  .facts{list-style:none;margin:8px 0 0}
+  .facts li{font-size:13.5px;color:var(--ink);padding:7px 0 7px 20px;position:relative;border-top:1px solid var(--line2)}
+  .facts li:first-child{border-top:none}
+  .facts li::before{content:"";position:absolute;left:3px;top:13px;width:6px;height:6px;border-radius:50%;background:var(--flare)}
+  .facts li .k{font-weight:600;color:var(--sub);font-size:11px;letter-spacing:.05em;text-transform:uppercase;margin-right:7px}
+
+  /* features / benefits */
+  .fb{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+  .fbcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px;box-shadow:var(--sh)}
+  .fbcard .fbf{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--flare-deep);font-weight:700}
+  .fbcard .fbt{font-weight:600;margin:6px 0 8px;font-size:15px;letter-spacing:-.01em}
+  .fbcard .fbb{font-size:13px;color:var(--sub)}
+  .marks{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .mark{border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;background:#fff}
+  .mark .mk{width:11px;height:11px;border-radius:50%;background:#000;box-shadow:0 0 0 1px var(--flare),0 0 6px rgba(241,187,100,.6)}
+
+  /* internal / exam */
+  .internalbox{background:linear-gradient(180deg,#FFFCF4,#FBFAF7);border:1px solid var(--line);border-left:3px solid var(--flare);border-radius:14px;padding:20px 22px;margin-top:18px}
+  .internalbox .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--flare-deep);font-weight:700;display:flex;align-items:center;gap:8px}
+  .exq{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin-top:12px}
+  .exq .q{font-weight:600;font-size:14px}
+  .exq .opts{margin-top:9px;display:grid;gap:6px}
+  .exq .opt{font-size:13px;color:var(--sub);padding:9px 12px;border:1px solid var(--line);border-radius:9px}
+  .exq .opt.correct{border-color:var(--flare);background:var(--flare-wash);color:var(--flare-deep);font-weight:600}
+
+  /* welcome */
+  .welcome .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+  .wcard{border-radius:16px;padding:24px;border:1px solid var(--line)}
+  .wcard.old{background:var(--wash)}
+  .wcard.new{background:var(--ink);border-color:#000;color:var(--white)}
+  .wcard h3{font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:15px;font-weight:600}
+  .wcard.old h3{color:var(--faint)} .wcard.new h3{color:var(--flare)}
+  .wlist{list-style:none} .wlist li{font-size:14px;padding:9px 0 9px 27px;position:relative;color:var(--sub)}
+  .wcard.new .wlist li{color:#E9E7E3}
+  .wlist li::before{position:absolute;left:2px;top:9px;font-size:13px}
+  .wcard.old .wlist li::before{content:"\2717";color:#B98C8C}
+  .wcard.new .wlist li::before{content:"\2713";color:var(--flare);font-weight:700}
+  .welcome .stat{display:flex;gap:36px;margin-top:26px;padding:20px 24px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh)}
+  .stat .s b{font-size:25px;display:block;letter-spacing:-.03em;font-weight:600}
+  .stat .s span{font-size:12.5px;color:var(--sub)}
+
+  /* footer nav */
+  .footnav{position:fixed;bottom:0;left:294px;right:0;background:rgba(246,245,241,.92);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:14px 50px;display:flex;justify-content:space-between;align-items:center;max-width:1174px}
+  .footnav .hint{font-size:12.5px;color:var(--sub)}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:12px 19px;border-radius:999px;opacity:0;transition:.3s;z-index:40;box-shadow:0 14px 34px -8px rgba(0,0,0,.5);display:flex;align-items:center;gap:9px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .tk{color:var(--flare)}
+  @media(max-width:920px){ nav.rail{display:none} main{padding:26px 22px 90px} .footnav{left:0;padding:13px 22px} .fb{grid-template-columns:1fr} .welcome .compare{grid-template-columns:1fr} }
+
+  /* passcode gate (deterrent only) */
+  #gate{position:fixed;inset:0;z-index:1000;background:radial-gradient(circle at 50% 42%,#17130c 0%,#000 62%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .45s}
+  #gate.hidden{opacity:0;pointer-events:none}
+  #gate .gecl{width:66px;height:66px;border-radius:50%;background:#000;box-shadow:0 0 0 1.6px var(--flare),0 0 42px 9px rgba(241,187,100,.4);margin-bottom:30px}
+  #gate .gwm{color:#fff;letter-spacing:.32em;font-size:15px;font-weight:500}
+  #gate .gsub{color:var(--flare);letter-spacing:.24em;font-size:10.5px;margin-top:11px;text-transform:uppercase}
+  #gate .grow{margin-top:34px;display:flex;gap:10px}
+  #gate input{background:rgba(255,255,255,.06);border:1px solid rgba(241,187,100,.35);border-radius:999px;padding:12px 20px;color:#fff;font-family:var(--sans);font-size:14px;letter-spacing:.06em;width:230px;text-align:center}
+  #gate input:focus{outline:none;border-color:var(--flare);background:rgba(255,255,255,.1)}
+  #gate button{background:var(--flare);border:none;border-radius:999px;padding:12px 24px;font-family:var(--sans);font-weight:600;font-size:14px;color:#000;cursor:pointer}
+  #gate .gerr{color:#E58F8F;font-size:12px;margin-top:16px;height:14px;letter-spacing:.02em}
+  #gate .ghint{position:absolute;bottom:28px;color:#4a4842;font-size:11px;letter-spacing:.12em}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="gecl"></div>
+  <div class="gwm">SMALL CIRCLE</div>
+  <div class="gsub">Course Brief · Private Preview</div>
+  <div class="grow"><input id="gatecode" type="password" placeholder="Passcode" autocomplete="off" autofocus><button id="gatego">Enter</button></div>
+  <div class="gerr" id="gateerr"></div>
+  <div class="ghint">Small Circle internal · shared link</div>
+</div>
+<header>
+  <div class="brandlockup">
+    <span class="eclipse"></span>
+    <span class="nm">SMALL CIRCLE</span>
+    <span class="sep">·</span>
+    <span class="doc">Course Brief</span>
+    <span class="tag" id="brandtag">TOTALITY</span>
+  </div>
+  <div class="topright">
+    <div class="saved"><span class="dot"></span> Saved just now</div>
+    <div class="pct"><div class="bar"><i id="topbar"></i></div><b id="toppct">0%</b> complete</div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail"></nav>
+  <main id="main"></main>
+</div>
+
+<div class="footnav">
+  <button class="btn ghost" id="backbtn">← Back</button>
+  <div class="hint" id="foothint"></div>
+  <button class="btn pri" id="nextbtn">Continue →</button>
+</div>
+<div class="toast" id="toast"><span class="tk">✓</span><span id="toastmsg">Confirmed</span></div>
+
+<script>
+// ---------- Data model: pre-filled Totality brief ----------
+const SRC = {
+  call:"Drafted from your discovery call",
+  proposal:"Drafted from the proposal",
+  site:"Pulled from your website",
+  sc:"Written by your Small Circle instructional designer"
+};
+function F(label, why, source, type, value, state){ return {label, why, source, type, value, state:state||'review'}; }
+
+const brief = {
+  brand:"Totality",
+  steps:[
+    { id:"welcome", nav:"How this works", sub:"Start here", kind:"welcome" },
+
+    { id:"basics", nav:"The basics", sub:"Title, description, brand assets", kind:"fields",
+      hint:"We drafted these from your proposal and site. Skim, tweak a word if you want, and confirm.",
+      fields:[
+        F("Course title","This shows on the course home screen and in the SGWS library.",SRC.proposal,"text","Totality: Sell the Moment"),
+        F("Course description","One or two sentences. Sets the tone before the first lesson.",SRC.proposal,"textarea","A single-estate tequila from the highlands of Jalisco. Nothing added, ever, and a reserve bottled only in the minutes of a total eclipse. Learn the story, the range, and how to sell the wait."),
+        F("Header image","The first image a learner sees. We favor a lifestyle shot over a bottle shot so it stays current. High-res, no words.","We can source this","asset","",'needs'),
+        F("Brand logo","Vector or transparent PNG, used throughout the course chrome.","From your brand guide","asset","logo received",'confirmed'),
+        F("Brand guide link","Colors, type, and voice so the course matches your brand exactly.",SRC.site,"text","totality.com/brand (BVI on file)"),
+      ]},
+
+    { id:"story", nav:"Your story", sub:"Intro, founder, timeline", kind:"story",
+      hint:"Your brand history becomes an interactive <b>timeline</b> in the course. We drafted the events from your call; add, reorder, or correct any of them.",
+      intro:F("Brand introduction","3 to 4 sentences, first person. Opens the Our Story lesson.",SRC.call,"textarea","We are one family, one estate, high in the highlands of Jalisco. Our founder came to tequila through the sky, and built a house around a simple idea: the things worth seeing make you wait. Nothing is added, ever."),
+      founder:F("Founder spotlight — Joaquín Vega","Optional. A short bio and a quote power the founder card.",SRC.call,"textarea","Joaquín Vega, a lifelong eclipse chaser, grew up in the agave rows of Los Altos. Quote: “Everything worth seeing makes you wait.”"),
+      timeline:[
+        {date:"1991", title:"The eclipse that started it", desc:"At nine, Joaquín's grandfather walks him out of the fields to stand in the shadow of a total eclipse. Four minutes of daytime dark.", state:"confirmed"},
+        {date:"2009", title:"First plantings on the ridge", desc:"The family plants estate agave on the high red-clay slopes of Los Altos.", state:"confirmed"},
+        {date:"2017", title:"First estate harvest", desc:"The first fully estate-grown, hand-harvested crop comes in.", state:"review"},
+        {date:"2024", title:"The first eclipse-bottled Reserve", desc:"A single barrel is bottled during the minutes of a real total eclipse, dated and numbered.", state:"review"},
+      ]},
+
+    { id:"production", nav:"How it's made", sub:"Process steps, terroir", kind:"stub",
+      stubnote:"Pre-filled with a 5-step process interactive (brick-oven roast, tahona, open-air ferment, copper pot still, nothing added) and optional highland terroir facts. Same confirm-and-refine pattern as the other steps." },
+
+    { id:"lineup", nav:"The lineup", sub:"Products, roles, facts", kind:"lineup",
+      hint:"Each product becomes a card in the course. We assigned each one a <b>selling role</b> and drafted its facts. Confirm the role we picked and correct any detail.",
+      products:[
+        { name:"Blanco", role:"DEFINE", state:"confirmed", facts:[["Style","Unaged, 100% blue agave, additive-free"],["Palate","Bright agave, citrus zest, white pepper"],["Serve","The three-ingredient margarita"],["Sell","The house statement, nothing to hide"]] },
+        { name:"Reposado", role:"ANCHOR", state:"review", facts:[["Aging","8 months, ex-bourbon oak"],["Palate","Soft gold, vanilla, light spice"],["Serve","The Highland Paloma"],["Sell","The versatile back-bar workhorse"]] },
+        { name:"Añejo", role:"SERIOUS", state:"review", facts:[["Aging","18 months, French + American oak"],["Palate","Dried fig, baking spice, toasted oak"],["Serve","Neat, one rock, orange peel"],["Sell","The credibility sipper"]] },
+        { name:"Cristalino", role:"CURIOSITY", state:"review", facts:[["Style","Añejo, charcoal-filtered clear"],["Palate","Añejo depth in a clear pour"],["Serve","Neat, chilled"],["Sell","The aged-but-clear discovery"]] },
+        { name:"Totality Reserve", role:"DEPTH", state:"review", facts:[["Style","Extra añejo, single barrel"],["Detail","Bottled only during a total eclipse, dated + numbered"],["Palate","Dark caramel, leather, long finish"],["Sell","The unrepeatable trade-up"]] },
+      ]},
+
+    { id:"selling", nav:"Why it sells", sub:"Features, benefits, awards", kind:"selling",
+      hint:"We turned your positioning into three <b>feature-to-benefit</b> cards (learners click a feature to reveal the benefit). Confirm or reword.",
+      fb:[
+        {f:"Additive-free", b:"The purity bartenders and guests now ask for by name.", state:"confirmed"},
+        {f:"Single highland estate", b:"Full traceability and a sweeter, brighter agave you can taste.", state:"review"},
+        {f:"The eclipse Reserve", b:"An unrepeatable, dated bottling that trades the check up.", state:"review"},
+      ],
+      marks:["Additive-Free","100% Blue Agave","Estate Grown"],
+      awards:F("Awards & accolades","Optional. Title, score, and an image if you have one. SGWS lists these on the selling screen.","We'll add any you send","text","(none on file yet — add if available)","needs") },
+
+    { id:"exam", nav:"The exam", sub:"We write this for you", kind:"exam" },
+  ]
+};
+
+// ---------- State ----------
+let cur = 0;
+const stepEl = {};
+
+// completeness: count confirmable items across all steps
+function tally(){
+  let total=0, done=0;
+  brief.steps.forEach(s=>{
+    if(s.kind==='fields'){ s.fields.forEach(f=>{ total++; if(f.state==='confirmed')done++; }); }
+    if(s.kind==='story'){ [s.intro,s.founder].forEach(f=>{total++; if(f.state==='confirmed')done++;}); s.timeline.forEach(t=>{total++; if(t.state==='confirmed')done++;}); }
+    if(s.kind==='lineup'){ s.products.forEach(p=>{total++; if(p.state==='confirmed')done++;}); }
+    if(s.kind==='selling'){ s.fb.forEach(x=>{total++; if(x.state==='confirmed')done++;}); total++; if(s.awards.state==='confirmed')done++; }
+  });
+  return {total,done,pct: total? Math.round(done/total*100):0};
+}
+// per-step status for rail
+function stepStatus(s){
+  let items=[], done=0;
+  if(s.kind==='fields') items=s.fields.map(f=>f.state);
+  else if(s.kind==='story'){ items=[s.intro.state,s.founder.state,...s.timeline.map(t=>t.state)]; }
+  else if(s.kind==='lineup') items=s.products.map(p=>p.state);
+  else if(s.kind==='selling'){ items=[...s.fb.map(x=>x.state),s.awards.state]; }
+  else return s.kind==='exam'?'internal':'none';
+  done=items.filter(x=>x==='confirmed').length;
+  if(done===0) return 'none';
+  if(done===items.length) return 'done';
+  return 'partial';
+}
+
+const svgSource='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg>';
+
+// ---------- Render ----------
+function pill(state){
+  const map={review:['sp-review','Needs your review'],confirmed:['sp-confirmed','Confirmed'],needs:['sp-needs','Needs you']};
+  const [cls,txt]=map[state]; return `<span class="statepill ${cls}"><span class="d"></span>${txt}</span>`;
+}
+function fieldCard(f, idx, ctx){
+  const control = f.type==='textarea'
+      ? `<textarea rows="3" data-edit="${ctx}:${idx}">${f.value}</textarea>`
+      : f.type==='asset'
+      ? assetControl(f, ctx, idx)
+      : `<input type="text" data-edit="${ctx}:${idx}" value="${f.value.replace(/"/g,'&quot;')}">`;
+  const actions = f.state==='confirmed'
+      ? `<button class="btn sm" data-unconfirm="${ctx}:${idx}">Edit</button>`
+      : `<button class="btn ok sm" data-confirm="${ctx}:${idx}">✓ Looks right</button><button class="btn sm ghost" data-focus="${ctx}:${idx}">Rewrite</button>`;
+  return `<div class="field ${f.state==='confirmed'?'confirmed':(f.state==='needs'?'needs':'')}">
+    <div class="fhead"><div class="flabel">${f.label}<span class="why">i<span class="whytip">${f.why}</span></span></div>${pill(f.state)}</div>
+    <div class="source">${svgSource} ${f.source}</div>
+    ${control}
+    <div class="frow">${actions}</div>
+  </div>`;
+}
+function assetControl(f, ctx, idx){
+  const got = f.value && f.state==='confirmed';
+  return `<div class="asset">
+      <div class="assetthumb">${got?'✓ received':'drop / preview'}</div>
+      <div>
+        <div class="assetopts">
+          <button class="segbtn ${f._m==='up'?'on':''}" data-am="${ctx}:${idx}:up">Upload a file</button>
+          <button class="segbtn ${f._m==='link'?'on':''}" data-am="${ctx}:${idx}:link">Paste a link</button>
+          <button class="segbtn ${f._m==='src'||!f._m?'on':''}" data-am="${ctx}:${idx}:src">Let us source it</button>
+        </div>
+        <div class="assetnote">${(f._m==='src'||!f._m)?'Small Circle will create or source this for you. Nothing needed from your side.':(f._m==='link'?'Paste a shareable link (no expiring links, please).':'Drag a file here or click to upload.')}</div>
+      </div>
+    </div>`;
+}
+
+function render(){
+  // rail
+  const t=tally();
+  let rh=`<div class="railtitle">${brief.brand} · course brief</div>`;
+  brief.steps.forEach((s,i)=>{
+    const st=stepStatus(s);
+    const cls=st==='done'?'done':st==='partial'?'partial':st==='internal'?'internal':'';
+    const badge=st==='done'?'✓':st==='internal'?'SC':(i);
+    rh+=`<div class="step ${i===cur?'active':''} ${cls}" data-go="${i}">
+      <div class="sd">${badge}</div>
+      <div><div class="st">${s.nav}</div><div class="ss">${s.sub}</div></div></div>`;
+  });
+  rh+=`<div class="railmeter"><div class="rm-t"><span>Brief completeness</span><b>${t.pct}%</b></div><div class="rm-b"><i style="width:${t.pct}%"></i></div><div class="rm-n">${t.done} of ${t.total} items confirmed · the rest is on us</div></div>`;
+  document.getElementById('rail').innerHTML=rh;
+  document.getElementById('topbar').style.width=t.pct+'%';
+  document.getElementById('toppct').textContent=t.pct+'%';
+
+  // main
+  const s=brief.steps[cur];
+  let m='';
+  if(s.kind==='welcome') m=welcomeHTML();
+  else{
+    m=`<div class="eyebrow">Step ${cur} of ${brief.steps.length-1}</div><h1>${s.nav}</h1>`;
+    if(s.hint) m+=`<div class="sechint"><span class="ic">✎</span><div>${s.hint}</div></div>`;
+    if(s.kind==='fields') s.fields.forEach((f,i)=> m+=fieldCard(f,i,`basics`));
+    else if(s.kind==='story') m+=storyHTML(s);
+    else if(s.kind==='lineup') m+=lineupHTML(s);
+    else if(s.kind==='selling') m+=sellingHTML(s);
+    else if(s.kind==='stub') m+=`<div class="internalbox"><div class="lbl">Pre-filled · in this build we stubbed the detail</div><p style="margin-top:10px;color:var(--sub);font-size:14px">${s.stubnote}</p></div>`;
+    else if(s.kind==='exam') m+=examHTML();
+  }
+  document.getElementById('main').innerHTML=m;
+
+  document.getElementById('backbtn').style.visibility= cur===0?'hidden':'visible';
+  const last = cur===brief.steps.length-1;
+  document.getElementById('nextbtn').textContent = last?'Submit brief to Small Circle':'Continue →';
+  document.getElementById('foothint').textContent = last?'When you submit, we start building your course.':'Autosaved. You can leave and come back anytime.';
+  window.scrollTo(0,0);
+}
+
+function welcomeHTML(){
+  return `<div class="welcome">
+    <div class="eyebrow">Welcome, Totality</div>
+    <h1>We already started your course.</h1>
+    <p class="lead">Instead of a 43-slide storyboard to fill out, your Small Circle team drafted this brief from our conversations and your materials. Review what we wrote, tweak anything, and hand off the few assets only you have. About 15 minutes.</p>
+    <div class="compare">
+      <div class="wcard old"><h3>The old storyboard</h3><ul class="wlist">
+        <li>43 slides to complete yourself</li><li>Write your own exam questions</li><li>Draft all copy from scratch</li><li>Organize it into a deck</li><li>Needs Google tools</li></ul></div>
+      <div class="wcard new"><h3>Your Course Brief</h3><ul class="wlist">
+        <li>Pre-written by us, you confirm</li><li>We write the exam as your designers</li><li>Copy drafted from your call and site</li><li>We handle instructional design</li><li>Works anywhere, nothing to install</li></ul></div>
+    </div>
+    <div class="stat">
+      <div class="s"><b id="w1">62%</b><span>already drafted for you</span></div>
+      <div class="s"><b>6</b><span>things only you can add</span></div>
+      <div class="s"><b>~15 min</b><span>to review and confirm</span></div>
+    </div>
+    <p style="margin-top:22px;color:var(--sub);font-size:13.5px">Behind the scenes, every field maps to a lesson interaction we have already built: timelines, process steppers, flip cards, drag-to-match, and features-and-benefits reveals. You provide the truth; we make it world class.</p>
+  </div>`;
+}
+function storyHTML(s){
+  let h=fieldCard(s.intro,'intro','story')+fieldCard(s.founder,'founder','story');
+  h+=`<h1 style="font-size:19px;margin:30px 0 2px">Brand timeline</h1><p class="lead" style="font-size:14px">Becomes a scroll-through interactive. Drafted from your call, confirm or add.</p><div class="tl">`;
+  s.timeline.forEach((t,i)=>{
+    const last=i===s.timeline.length-1;
+    h+=`<div class="tlitem ${t.state==='confirmed'?'confirmed':''}">
+      <div class="tlnode"><div class="dot"></div>${last?'':'<div class="line"></div>'}</div>
+      <div class="tlbody">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div class="tldate">${t.date}</div><div class="tltitle">${t.title}</div></div>${pill(t.state)}</div>
+        <div class="tldesc">${t.desc}</div>
+        <div class="tlmeta"><span class="chipmini">${svgSource} photo: we'll source it</span>
+          ${t.state==='confirmed'?`<button class="btn sm" data-tlunc="${i}">Edit</button>`:`<button class="btn ok sm" data-tlok="${i}">✓ Looks right</button>`}
+        </div>
+      </div></div>`;
+  });
+  h+=`</div><div class="addrow"><button class="btn" data-addtl>＋ Add an event</button></div>`;
+  return h;
+}
+function lineupHTML(s){
+  let h='';
+  s.products.forEach((p,i)=>{
+    h+=`<div class="prod ${p.state==='confirmed'?'confirmed':''}">
+      <div class="pshot"><div class="rings"></div>bottle shot<br>we'll source it</div>
+      <div>
+        <div class="phead"><div class="pname">${p.name}</div>${pill(p.state)}</div>
+        <div class="roletag"><label>Selling role</label>
+          <select data-role="${i}">${['DEFINE','ANCHOR','SERIOUS','BROADEN','CURIOSITY','RECRUIT','TWILIGHT','DEPTH'].map(r=>`<option ${r===p.role?'selected':''}>${r}</option>`).join('')}</select>
+          <span class="why">i<span class="whytip">We assign each product one clear selling job so a rep always knows the right pour. Confirm or change ours.</span></span>
+        </div>
+        <ul class="facts">${p.facts.map(f=>`<li><span class="k">${f[0]}</span>${f[1]}</li>`).join('')}</ul>
+        <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button><button class="btn sm ghost">Add a fact</button>`}</div>
+      </div></div>`;
+  });
+  return h;
+}
+function sellingHTML(s){
+  let h=`<div class="fb">`;
+  s.fb.forEach((x,i)=>{ h+=`<div class="fbcard"><div class="fbf">Feature</div><div class="fbt">${x.f}</div><div class="fbf" style="color:var(--faint)">Benefit ↓</div><div class="fbb">${x.b}</div><div class="frow" style="margin-top:12px">${x.state==='confirmed'?pill('confirmed'):`<button class="btn ok sm" data-fbok="${i}">✓ Looks right</button>`}</div></div>`; });
+  h+=`</div>`;
+  h+=`<h1 style="font-size:18px;margin:28px 0 2px">Proof marks</h1><p class="lead" style="font-size:14px">Pulled from your positioning. These become trust badges in the selling lesson.</p><div class="marks">${s.marks.map(m=>`<span class="mark"><span class="mk"></span>${m}</span>`).join('')}</div>`;
+  h+=`<div style="margin-top:24px">${fieldCard(s.awards,'awards','selling')}</div>`;
+  return h;
+}
+function examHTML(){
+  return `<div class="eyebrow">Step 7 · Internal</div><h1>The exam</h1>
+    <div class="sechint"><span class="ic">✎</span><div><b>You don't write this.</b> As your instructional designers, we generate the 6-question exam from the content you just confirmed, then show it to you here to approve. This is the single biggest thing the old storyboard made you do yourself.</div></div>
+    <div class="internalbox"><div class="lbl">Small Circle draft · preview</div>
+      <div class="exq"><div class="q">1 &nbsp;A guest wants an additive-free tequila for a clean margarita. Which do you pour?</div>
+        <div class="opts"><div class="opt correct">Blanco — the additive-free house statement</div><div class="opt">Totality Reserve — the eclipse single barrel</div><div class="opt">Añejo — the aged sipper</div><div class="opt">Cristalino — the aged-clear curiosity</div></div></div>
+      <div class="exq"><div class="q">2 &nbsp;What makes the Totality Reserve unrepeatable?</div>
+        <div class="opts"><div class="opt correct">It's bottled only during a real total eclipse, dated and numbered</div><div class="opt">It's the cheapest expression</div><div class="opt">It's aged the shortest</div><div class="opt">It uses added color</div></div></div>
+      <p style="margin-top:14px;color:var(--sub);font-size:13px">+ 4 more, generated from your story, production, and lineup. 80% to pass, retakeable.</p>
+      <div class="frow"><button class="btn pri" onclick="toast('Sent to your Small Circle designer')">Approve exam</button><button class="btn">Request changes</button></div>
+    </div>`;
+}
+
+// ---------- Interactions ----------
+function toast(msg){ const t=document.getElementById('toast'); document.getElementById('toastmsg').textContent=msg; t.classList.add('show'); clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),1700); }
+function getField(ref){ const [ctx,idx]=ref.split(':'); const s=brief.steps[cur];
+  if(ctx==='basics') return s.fields[idx];
+  if(ctx==='intro') return s.intro; if(ctx==='founder') return s.founder;
+  if(ctx==='awards') return s.awards; return null; }
+
+document.addEventListener('click',e=>{
+  const go=e.target.closest('[data-go]'); if(go){ cur=+go.dataset.go; render(); return; }
+  const c=e.target.closest('[data-confirm]'); if(c){ getField(c.dataset.confirm).state='confirmed'; toast('Confirmed'); render(); return; }
+  const u=e.target.closest('[data-unconfirm]'); if(u){ getField(u.dataset.unconfirm).state='review'; render(); return; }
+  const fo=e.target.closest('[data-focus]'); if(fo){ const el=document.querySelector(`[data-edit="${fo.dataset.focus}"]`); if(el){el.focus();} return; }
+  const am=e.target.closest('[data-am]'); if(am){ const [ctx,idx,mode]=am.dataset.am.split(':'); const f=getField(ctx+':'+idx); f._m=mode; if(mode==='up'||mode==='link'){f.state='needs';} render(); return; }
+  const tok=e.target.closest('[data-tlok]'); if(tok){ brief.steps[cur].timeline[tok.dataset.tlok].state='confirmed'; toast('Event confirmed'); render(); return; }
+  const tun=e.target.closest('[data-tlunc]'); if(tun){ brief.steps[cur].timeline[tun.dataset.tlunc].state='review'; render(); return; }
+  if(e.target.closest('[data-addtl]')){ brief.steps[cur].timeline.push({date:"Year",title:"New event",desc:"Describe what happened...",state:"review"}); toast('Event added'); render(); return; }
+  const pok=e.target.closest('[data-pok]'); if(pok){ brief.steps[cur].products[pok.dataset.pok].state='confirmed'; toast('Product confirmed'); render(); return; }
+  const pun=e.target.closest('[data-punc]'); if(pun){ brief.steps[cur].products[pun.dataset.punc].state='review'; render(); return; }
+  const fbok=e.target.closest('[data-fbok]'); if(fbok){ brief.steps[cur].fb[fbok.dataset.fbok].state='confirmed'; toast('Confirmed'); render(); return; }
+});
+document.addEventListener('input',e=>{ const ed=e.target.closest('[data-edit]'); if(ed){ const f=getField(ed.dataset.edit); if(f) f.value=ed.value; } });
+document.addEventListener('change',e=>{ const r=e.target.closest('[data-role]'); if(r){ brief.steps[cur].products[r.dataset.role].role=r.value; } });
+document.getElementById('backbtn').onclick=()=>{ if(cur>0){cur--;render();} };
+document.getElementById('nextbtn').onclick=()=>{ if(cur<brief.steps.length-1){cur++;render();} else { toast('Brief submitted — we start building'); } };
+
+render();
+
+// ---------- passcode gate (deterrent only; change PASS below) ----------
+(function(){
+  const PASS = "corona141";
+  const gate = document.getElementById('gate');
+  if(sessionStorage.getItem('cb_ok')==='1'){ gate.style.display='none'; return; }
+  function unlock(){ sessionStorage.setItem('cb_ok','1'); gate.classList.add('hidden'); setTimeout(()=>gate.style.display='none',480); }
+  function tryit(){
+    const v=document.getElementById('gatecode').value.trim().toLowerCase();
+    if(v===PASS) unlock();
+    else document.getElementById('gateerr').textContent='Not quite. Try again.';
+  }
+  document.getElementById('gatego').onclick=tryit;
+  document.getElementById('gatecode').addEventListener('keydown',e=>{ if(e.key==='Enter') tryit(); });
+})();
+</script>
+</body>
+</html>
