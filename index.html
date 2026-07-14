@@ -674,7 +674,7 @@ function hydrateFromDispatch(doc){
     stubnote:"We draft the production walkthrough with you after this brief comes back. Nothing to review here yet." });
   if(lineup) steps.push({ id:"lineup", nav:"The lineup", sub:"Products, roles, facts", kind:"lineup",
     hint:"Each product becomes its own card. Check the <b>selling role</b> and the details for each.",
-    products: lineup.products.map(p=>({name:p.name, role:p.role, state:_stFrom[p.state]||"review", facts:p.facts, _id:p.id})) });
+    products: lineup.products.map(p=>({name:p.name, role:p.role, state:_stFrom[p.state]||"review", facts:(p.facts||[]).map(f=>Array.isArray(f)?f:[f.k,f.v]), _id:p.id})) });
   if(selling) steps.push({ id:"selling", nav:"Why it sells", sub:"Features, benefits, awards", kind:"selling",
     hint:"How the brand sells, shown as <b>feature-and-benefit</b> cards. Review and refine the pairings.",
     fb: selling.fb.map(x=>({f:x.f, b:x.b, state:_stFrom[x.state]||"review"})),
