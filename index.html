@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Course Brief · Small Circle</title>
+<title>E-Learning Module · Small Circle</title>
 <meta name="description" content="Review and complete your brand's course brief with Small Circle.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Course Brief · Small Circle">
+<meta property="og:title" content="E-Learning Module · Small Circle">
 <meta property="og:description" content="Review and complete your brand's course brief with Small Circle.">
 <meta property="og:image" content="https://thechuch.github.io/course-brief/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://thechuch.github.io/course-brief/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Course Brief · Small Circle">
+<meta name="twitter:title" content="E-Learning Module · Small Circle">
 <meta name="twitter:description" content="Review and complete your brand's course brief with Small Circle.">
 <meta name="twitter:image" content="https://thechuch.github.io/course-brief/og-image.jpg">
 <meta name="theme-color" content="#000000">
@@ -310,7 +310,7 @@
 <div id="gate">
   <div class="gecl"></div>
   <div class="gwm">SMALL CIRCLE</div>
-  <div class="gsub">Course Brief · Private Preview</div>
+  <div class="gsub">E-Learning Module · Private Preview</div>
   <div class="grow"><input id="gatecode" type="password" placeholder="Passcode" autocomplete="off" autofocus><button id="gatego">Enter</button></div>
   <div class="gerr" id="gateerr"></div>
   <div class="ghint">Small Circle internal · shared link</div>
@@ -322,7 +322,7 @@
       <span class="eclipse"></span>
       <span class="nm">SMALL CIRCLE</span>
       <span class="sep">·</span>
-      <span class="doc">Course Brief</span>
+      <span class="doc">E-Learning Module</span>
       <span class="tag" id="brandtag">TOTALITY</span>
     </div>
   </div>
@@ -480,7 +480,7 @@ function assetControl(f, ctx, idx){
 function render(){
   // rail
   const t=tally();
-  let rh=`<div class="railtitle">${brief.brand} · course brief</div>`;
+  let rh=`<div class="railtitle">${brief.brand} · e-learning module</div>`;
   brief.steps.forEach((s,i)=>{
     const st=stepStatus(s);
     const cls=st==='done'?'done':st==='partial'?'partial':st==='internal'?'internal':'';
@@ -491,6 +491,7 @@ function render(){
   });
   rh+=`<div class="railmeter"><div class="rm-t"><span>Brief completeness</span><b>${t.pct}%</b></div><div class="rm-b"><i style="width:${t.pct}%"></i></div><div class="rm-n">${t.done} of ${t.total} confirmed</div></div>`;
   document.getElementById('rail').innerHTML=rh;
+  const bt=document.getElementById('brandtag'); if(bt) bt.textContent=brief.brand.toUpperCase();
   document.getElementById('topbar').style.width=t.pct+'%';
   document.getElementById('mprogi').style.width=t.pct+'%';
   document.getElementById('toppct').textContent=t.pct+'%';
@@ -524,7 +525,7 @@ function welcomeHTML(){
   const covers=brief.steps.filter(s=>['fields','story','lineup','selling','stub'].includes(s.kind));
   const items=covers.map((s,i)=>`<div class="wc"><span class="wn">${String(i+1).padStart(2,'0')}</span><div><b>${s.nav}</b><span>${s.sub}</span></div></div>`).join('');
   return `<div class="welcome">
-    <div class="eyebrow">${brief.brand} · Course Brief</div>
+    <div class="eyebrow">${brief.brand} · E-Learning Module</div>
     <h1>Let's shape your course.</h1>
     <p class="lead">Everything here is a starting point. Go section by section: keep what's right, adjust what isn't, and add the few pieces only you have. About fifteen minutes, and it saves as you go.</p>
     <div class="wcover">${items}</div>
@@ -575,9 +576,18 @@ function sellingHTML(s){
   return h;
 }
 function examHTML(){
-  return `<div class="eyebrow">Step ${cur} of ${brief.steps.length-1}</div><h1>Knowledge check</h1>
-    <div class="sechint"><span class="ic">✎</span><div>A short check closes the course. Here's a first draft based on what you confirmed, have a look and flag anything you'd change.</div></div>
-    <div class="internalbox"><div class="lbl">Draft preview</div>
+  const intro = `<div class="eyebrow">Step ${cur} of ${brief.steps.length-1}</div><h1>Knowledge check</h1>
+    <div class="sechint"><span class="ic">✎</span><div>A short check closes the course. Here's a first draft based on what you confirmed, have a look and flag anything you'd change.</div></div>`;
+  if(brief._exam){
+    const qs = brief._exam.length ? brief._exam.map((q,i)=>`<div class="exq"><div class="q">${i+1} &nbsp;${q.stem}</div>
+        <div class="opts">${q.options.map(o=>`<div class="opt ${o.correct?'correct':''}">${o.text}</div>`).join('')}</div></div>`).join('')
+      : `<p style="color:var(--sub);font-size:14px">We'll draft the knowledge check from the sections you confirm here.</p>`;
+    return intro + `<div class="internalbox"><div class="lbl">Draft preview</div>${qs}
+      <p style="margin-top:14px;color:var(--sub);font-size:13px">Learners pass at 80% and can retake it.</p>
+      <div class="frow"><button class="btn pri" data-examok>Looks good</button><button class="btn" onclick="toast('Noted, tell us in the submit note')">Suggest a change</button></div>
+    </div>`;
+  }
+  return intro + `<div class="internalbox"><div class="lbl">Draft preview</div>
       <div class="exq"><div class="q">1 &nbsp;A guest wants an additive-free tequila for a clean margarita. Which do you pour?</div>
         <div class="opts"><div class="opt correct">Blanco — the additive-free house statement</div><div class="opt">Totality Reserve — the eclipse single barrel</div><div class="opt">Añejo — the aged sipper</div><div class="opt">Cristalino — the aged-clear curiosity</div></div></div>
       <div class="exq"><div class="q">2 &nbsp;What makes the Totality Reserve unrepeatable?</div>
@@ -606,11 +616,12 @@ document.addEventListener('click',e=>{
   const pok=e.target.closest('[data-pok]'); if(pok){ brief.steps[cur].products[pok.dataset.pok].state='confirmed'; toast('Product confirmed'); render(); return; }
   const pun=e.target.closest('[data-punc]'); if(pun){ brief.steps[cur].products[pun.dataset.punc].state='review'; render(); return; }
   const fbok=e.target.closest('[data-fbok]'); if(fbok){ brief.steps[cur].fb[fbok.dataset.fbok].state='confirmed'; toast('Confirmed'); render(); return; }
+  if(e.target.closest('[data-examok]')){ brief._examOk = true; toast('Noted, thank you'); return; }
 });
 document.addEventListener('input',e=>{ const ed=e.target.closest('[data-edit]'); if(ed){ const f=getField(ed.dataset.edit); if(f) f.value=ed.value; } });
 document.addEventListener('change',e=>{ const r=e.target.closest('[data-role]'); if(r){ brief.steps[cur].products[r.dataset.role].role=r.value; } });
 document.getElementById('backbtn').onclick=()=>{ if(cur>0){cur--;render();} };
-document.getElementById('nextbtn').onclick=()=>{ if(cur<brief.steps.length-1){cur++;render();} else { toast('Brief submitted. Thank you.'); } };
+document.getElementById('nextbtn').onclick=()=>{ if(cur<brief.steps.length-1){cur++;render();} else if(window.__dispatchMode){ dispatchSubmit(); } else { toast('Brief submitted. Thank you.'); } };
 
 // ---------- mobile menu ----------
 const burger=document.getElementById('burger'), scrim=document.getElementById('scrim');
@@ -625,13 +636,144 @@ document.addEventListener('click',e=>{
   if(w) w.classList.toggle('open');
 });
 
-render();
+// ---------- Dispatch bridge (WS29): load + submit REAL briefs ----------
+// A share link carries ?brief=<id>&token=<one-time key>. With both present
+// we fetch the verified, grounded document from Dispatch, rebuild the
+// applet model from it, and post the supplier's confirmations/edits back.
+// Without them the built-in Totality demo renders untouched.
+const DISPATCH_API = "https://dispatch.smallcircle.ai";
+const _q = new URLSearchParams(location.search);
+const DBRIEF = _q.get("brief"), DTOKEN = _q.get("token");
+window.__dispatchMode = !!(DBRIEF && DTOKEN);
+let dispatchDoc = null, dispatchSubmitted = false;
+
+const _stFrom = {prefilled:"review", confirmed:"confirmed", edited:"confirmed", needs_client:"needs"};
+const _stTo   = {review:"prefilled", confirmed:"confirmed", needs:"needs_client"};
+function _f(df, fallbackLabel){
+  const label = df.label || fallbackLabel || "";
+  const type = (df.value && df.value.length > 90) ? "textarea" : "text";
+  const o = F(label, df.why || "", (df.source && df.source.label) || "From Small Circle", type, df.value || "", _stFrom[df.state] || "review");
+  o._id = df.id; return o;
+}
+function _sec(doc, id){ return doc.sections.find(s=>s.id===id) || null; }
+
+function hydrateFromDispatch(doc){
+  dispatchDoc = doc;
+  brief.brand = doc.client.display;
+  const basics = _sec(doc,"basics"), story = _sec(doc,"story"), lineup = _sec(doc,"lineup"),
+        selling = _sec(doc,"selling"), exam = _sec(doc,"exam");
+  const steps = [ { id:"welcome", nav:"How this works", sub:"Start here", kind:"welcome" } ];
+  if(basics) steps.push({ id:"basics", nav:"The basics", sub:"Title, description, positioning", kind:"fields",
+    hint:"The essentials for your module. Review each field and adjust anything that is not right.",
+    fields: basics.fields.map(f=>_f(f)) });
+  if(story) steps.push({ id:"story", nav:"Your story", sub:"Intro, founder, timeline", kind:"story",
+    hint:"Your brand history becomes an interactive <b>timeline</b>. Review the events below, and edit, reorder, or add your own.",
+    intro:_f(story.intro,"Brand introduction"), founder:_f(story.founder,"Founder spotlight"),
+    timeline: story.timeline.map(t=>({date:t.date, title:t.title, desc:t.desc, state:_stFrom[t.state]||"review", _id:t.id})) });
+  steps.push({ id:"production", nav:"How it's made", sub:"Process steps, terroir", kind:"stub",
+    stubnote:"We draft the production walkthrough with you after this brief comes back. Nothing to review here yet." });
+  if(lineup) steps.push({ id:"lineup", nav:"The lineup", sub:"Products, roles, facts", kind:"lineup",
+    hint:"Each product becomes its own card. Check the <b>selling role</b> and the details for each.",
+    products: lineup.products.map(p=>({name:p.name, role:p.role, state:_stFrom[p.state]||"review", facts:p.facts, _id:p.id})) });
+  if(selling) steps.push({ id:"selling", nav:"Why it sells", sub:"Features, benefits, awards", kind:"selling",
+    hint:"How the brand sells, shown as <b>feature-and-benefit</b> cards. Review and refine the pairings.",
+    fb: selling.fb.map(x=>({f:x.f, b:x.b, state:_stFrom[x.state]||"review"})),
+    marks: selling.marks, awards:_f(selling.awards,"Awards & accolades") });
+  steps.push({ id:"exam", nav:"Knowledge check", sub:"A quick preview to approve", kind:"exam" });
+  brief._exam = exam ? exam.items.map(i=>({stem:i.stem, options:i.options})) : [];
+  brief.steps = steps;
+}
+
+function applyBackToDispatch(){
+  const doc = dispatchDoc;
+  const basics = _sec(doc,"basics"), story = _sec(doc,"story"), lineup = _sec(doc,"lineup"),
+        selling = _sec(doc,"selling"), exam = _sec(doc,"exam");
+  const put = (docField, af) => { if(!docField||!af) return; docField.value = af.value; docField.state = _stTo[af.state] || "prefilled"; };
+  brief.steps.forEach(s=>{
+    if(s.id==="basics" && basics) s.fields.forEach(af=>put(basics.fields.find(x=>x.id===af._id), af));
+    if(s.id==="story" && story){
+      put(story.intro, s.intro); put(story.founder, s.founder);
+      const kept = [];
+      s.timeline.forEach((t,i)=>{
+        if(t._id){ const d = story.timeline.find(x=>x.id===t._id);
+          if(d){ d.date=t.date; d.title=t.title; d.desc=t.desc; d.state=_stTo[t.state]||"prefilled"; kept.push(d); } }
+        else kept.push({ id:"tl_c"+(i+1), date:t.date, title:t.title, desc:t.desc,
+          why:"Client-added timeline event", required:false,
+          source:{label:"Provided by you", citations:[]}, state:"edited" });
+      });
+      story.timeline = kept;
+    }
+    if(s.id==="lineup" && lineup) s.products.forEach(ap=>{ const d=lineup.products.find(x=>x.id===ap._id);
+      if(d){ d.role=ap.role; d.state=_stTo[ap.state]||"prefilled"; } });
+    if(s.id==="selling" && selling){
+      s.fb.forEach((ax,i)=>{ if(selling.fb[i]) selling.fb[i].state=_stTo[ax.state]||"prefilled"; });
+      put(selling.awards, s.awards);
+    }
+  });
+  if(exam && brief._examOk) exam.items.forEach(i=>{ i.state = "confirmed"; });
+}
+
+function dispatchFail(msg){
+  document.body.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b0b0c;color:#eee;font-family:system-ui,sans-serif;padding:24px;text-align:center"><div><div style="font-size:22px;font-weight:700;margin-bottom:10px">This link isn't active</div><div style="color:#aaa;max-width:420px;line-height:1.6">${msg}</div></div></div>`;
+}
+
+async function dispatchLoad(){
+  if(!window.__dispatchMode) return;
+  try{
+    const r = await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}`,
+      { headers: { Authorization: `Bearer ${DTOKEN}` } });
+    if(r.status===401){ dispatchFail("This link has expired or isn't valid. Ask your Small Circle producer for a fresh one."); return; }
+    if(r.status===404){ dispatchFail("We couldn't find this brief. Ask your Small Circle producer for a fresh link."); return; }
+    const body = await r.json();
+    if(body.enabled===false){ dispatchFail("This experience isn't live yet. Your Small Circle producer will follow up shortly."); return; }
+    hydrateFromDispatch(body.brief);
+  }catch(err){
+    dispatchFail("We couldn't load your brief right now. Please try again in a minute.");
+  }
+}
+
+async function dispatchSubmit(){
+  if(dispatchSubmitted){ toast("Already submitted. Thank you."); return; }
+  const btn = document.getElementById('nextbtn');
+  btn.disabled = true; btn.textContent = "Submitting…";
+  try{
+    applyBackToDispatch();
+    dispatchDoc.revision = dispatchDoc.revision + 1;
+    dispatchDoc.status = "submitted";
+    const r = await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}/submission`,
+      { method:"POST", headers:{ Authorization:`Bearer ${DTOKEN}`, "content-type":"application/json" },
+        body: JSON.stringify(dispatchDoc) });
+    const body = await r.json().catch(()=>({}));
+    if(r.ok){
+      dispatchSubmitted = true;
+      btn.textContent = "Submitted ✓";
+      toast("Brief submitted. Thank you — we'll take it from here.");
+      document.getElementById('foothint').textContent = "Submitted. Small Circle has been notified.";
+      return;
+    }
+    btn.disabled = false; btn.textContent = "Submit your brief";
+    if(body.error==="invalid_transition") toast("This brief is still in Small Circle review — it isn't open for submission yet.");
+    else if(body.error==="revision_rejected"||body.error==="revision_conflict") toast("This brief was updated elsewhere. Reload the page and try again.");
+    else toast("Couldn't submit right now. Please try again in a minute.");
+  }catch(err){
+    btn.disabled = false; btn.textContent = "Submit your brief";
+    toast("Couldn't submit right now. Please try again in a minute.");
+  }
+}
+
+async function boot(){
+  await dispatchLoad();
+  if(document.getElementById('main')) render();
+}
+
+boot();
 
 // ---------- passcode gate (deterrent only; change PASS below) ----------
 (function(){
   const PASS = "smallcircle";
   const gate = document.getElementById('gate');
-  if(sessionStorage.getItem('cb_ok')==='1'){ gate.style.display='none'; return; }
+  // A tokened Dispatch link IS the invitation; no passcode friction for clients.
+  if(window.__dispatchMode || sessionStorage.getItem('cb_ok')==='1'){ gate.style.display='none'; return; }
   function unlock(){ sessionStorage.setItem('cb_ok','1'); gate.classList.add('hidden'); setTimeout(()=>gate.style.display='none',480); }
   function tryit(){
     const v=document.getElementById('gatecode').value.trim().toLowerCase();
