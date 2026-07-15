@@ -304,6 +304,10 @@
   #gate button{background:var(--flare);border:none;border-radius:999px;padding:12px 24px;font-family:var(--sans);font-weight:600;font-size:14px;color:#000;cursor:pointer}
   #gate .gerr{color:#E58F8F;font-size:12px;margin-top:16px;height:14px;letter-spacing:.02em}
   #gate .ghint{position:absolute;bottom:28px;color:#4a4842;font-size:11px;letter-spacing:.12em}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:12px;padding:4px 10px;border-radius:99px;border:1px dashed var(--gold,#c9a15c);background:transparent;color:inherit;cursor:pointer;transition:background .15s}
+.chip:hover{background:rgba(201,161,92,.12)}
+.chip.add{border-style:solid}
 </style>
 </head>
 <body>
@@ -455,10 +459,14 @@ function fieldCard(f, idx, ctx){
   const actions = f.state==='confirmed'
       ? `<button class="btn sm" data-unconfirm="${ctx}:${idx}">Edit</button>`
       : `<button class="btn ok sm" data-confirm="${ctx}:${idx}">✓ Looks right</button><button class="btn sm ghost" data-focus="${ctx}:${idx}">Rewrite</button>`;
+  const chips = (f._sugg && f._sugg.length)
+    ? `<div class="chips">${f._sugg.map((c,ci)=>`<button class="chip ${c.kind}" data-chip="${ctx}:${idx}:${ci}" title="${c.kind==='add'?'From our research':'Idea starter'}">${c.label}</button>`).join('')}</div>`
+    : '';
   return `<div class="field ${f.state==='confirmed'?'confirmed':(f.state==='needs'?'needs':'')}">
     <div class="fhead"><div class="flabel">${f.label}<span class="why">i<span class="whytip">${f.why}</span></span></div>${pill(f.state)}</div>
     <div class="source">${svgSource} ${f.source}</div>
     ${control}
+    ${chips}
     <div class="frow">${actions}</div>
   </div>`;
 }
@@ -503,7 +511,7 @@ function render(){
   else{
     m=`<div class="eyebrow">Step ${cur} of ${brief.steps.length-1}</div><h1>${s.nav}</h1>`;
     if(s.hint) m+=`<div class="sechint"><span class="ic">✎</span><div>${s.hint}</div></div>`;
-    if(s.kind==='fields') s.fields.forEach((f,i)=> m+=fieldCard(f,i,`basics`));
+    if(s.kind==='fields') s.fields.forEach((f,i)=> m+=fieldCard(f,i,'basics'));
     else if(s.kind==='story') m+=storyHTML(s);
     else if(s.kind==='lineup') m+=lineupHTML(s);
     else if(s.kind==='selling') m+=sellingHTML(s);
@@ -553,24 +561,32 @@ function storyHTML(s){
 function lineupHTML(s){
   let h='';
   s.products.forEach((p,i)=>{
+    const nameEl = p._new ? `<input type="text" data-pname="${i}" placeholder="Product name" value="${(p.name||'').replace(/"/g,'&quot;')}" style="font-weight:700;font-size:16px">` : `<div class="pname">${p.name}</div>`;
     h+=`<div class="prod ${p.state==='confirmed'?'confirmed':''}">
       <div class="pshot"><div class="rings"></div>bottle shot<br>we'll source it</div>
       <div>
-        <div class="phead"><div class="pname">${p.name}</div>${pill(p.state)}</div>
+        <div class="phead">${nameEl}${pill(p.state)}</div>
         <div class="roletag"><label>Selling role</label>
           <select data-role="${i}">${['DEFINE','ANCHOR','SERIOUS','BROADEN','CURIOSITY','RECRUIT','TWILIGHT','DEPTH'].map(r=>`<option ${r===p.role?'selected':''}>${r}</option>`).join('')}</select>
           <span class="why">i<span class="whytip">We assign each product one clear selling job so a rep always knows the right pour. Confirm or change ours.</span></span>
         </div>
         <ul class="facts">${p.facts.map(f=>`<li><span class="k">${f[0]}</span>${f[1]}</li>`).join('')}</ul>
-        <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button><button class="btn sm ghost">Add a fact</button>`}</div>
+        <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button>`}</div>
       </div></div>`;
   });
+  if(window.__dispatchMode) h+=`<div class="addrow"><button class="btn" data-addprod>＋ Add a product</button></div>`;
   return h;
 }
 function sellingHTML(s){
   let h=`<div class="fb">`;
-  s.fb.forEach((x,i)=>{ h+=`<div class="fbcard"><div class="fbf">Feature</div><div class="fbt">${x.f}</div><div class="fbf" style="color:var(--faint)">Benefit ↓</div><div class="fbb">${x.b}</div><div class="frow" style="margin-top:12px">${x.state==='confirmed'?pill('confirmed'):`<button class="btn ok sm" data-fbok="${i}">✓ Looks right</button>`}</div></div>`; });
+  s.fb.forEach((x,i)=>{
+    const fEl = x._new ? `<input type="text" data-fbf="${i}" placeholder="Feature" value="${(x.f||'').replace(/"/g,'&quot;')}">` : `<div class="fbt">${x.f}</div>`;
+    const bEl = x._new ? `<input type="text" data-fbb="${i}" placeholder="Benefit for the buyer" value="${(x.b||'').replace(/"/g,'&quot;')}">` : `<div class="fbb">${x.b}</div>`;
+    h+=`<div class="fbcard"><div class="fbf">Feature</div>${fEl}<div class="fbf" style="color:var(--faint)">Benefit ↓</div>${bEl}<div class="frow" style="margin-top:12px">${x.state==='confirmed'?pill('confirmed'):`<button class="btn ok sm" data-fbok="${i}">✓ Looks right</button>`}</div></div>`;
+  });
   h+=`</div>`;
+  if(!s.fb.length) h=`<p class="lead" style="font-size:14px">Our research didn't surface verified feature-and-benefit pairs, so we left these open rather than guessing. Add the pairings you lean on:</p>`+h;
+  if(window.__dispatchMode) h+=`<div class="addrow" style="margin-top:10px"><button class="btn" data-addfb>＋ Add a pairing</button></div>`;
   h+=`<h1 style="font-size:18px;margin:28px 0 2px">Proof marks</h1><p class="lead" style="font-size:14px">Pulled from your positioning. These become trust badges in the selling lesson.</p><div class="marks">${s.marks.map(m=>`<span class="mark"><span class="mk"></span>${m}</span>`).join('')}</div>`;
   h+=`<div style="margin-top:24px">${fieldCard(s.awards,'awards','selling')}</div>`;
   return h;
@@ -584,7 +600,9 @@ function examHTML(){
       : `<p style="color:var(--sub);font-size:14px">We'll draft the knowledge check from the sections you confirm here.</p>`;
     return intro + `<div class="internalbox"><div class="lbl">Draft preview</div>${qs}
       <p style="margin-top:14px;color:var(--sub);font-size:13px">Learners pass at 80% and can retake it.</p>
-      <div class="frow"><button class="btn pri" data-examok>Looks good</button><button class="btn" onclick="toast('Noted, tell us in the submit note')">Suggest a change</button></div>
+      <div class="frow"><button class="btn pri" data-examok>Looks good</button></div>
+      <div style="margin-top:14px"><div class="fbf" style="margin-bottom:6px">Anything to change or add? Tell us here.</div>
+      <textarea rows="3" data-examcomment placeholder="e.g. Question 2 should mention the cold brew, and please add one about the serving ritual.">${brief._examComment||''}</textarea></div>
     </div>`;
   }
   return intro + `<div class="internalbox"><div class="lbl">Draft preview</div>
@@ -615,10 +633,30 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-addtl]')){ brief.steps[cur].timeline.push({date:"Year",title:"New event",desc:"Describe what happened...",state:"review"}); toast('Event added'); render(); return; }
   const pok=e.target.closest('[data-pok]'); if(pok){ brief.steps[cur].products[pok.dataset.pok].state='confirmed'; toast('Product confirmed'); render(); return; }
   const pun=e.target.closest('[data-punc]'); if(pun){ brief.steps[cur].products[pun.dataset.punc].state='review'; render(); return; }
+  const ch=e.target.closest('[data-chip]'); if(ch){
+    const [ctx2,idx2,ci]=ch.dataset.chip.split(':');
+    const f=getField(ctx2+':'+idx2);
+    if(f&&f._sugg&&f._sugg[ci]){
+      const t=f._sugg[ci].text;
+      f.value=(f.value?f.value.replace(/\s+$/,'')+" ":"")+t;
+      if(f.state==='confirmed')f.state='review';
+      f._sugg.splice(ci,1);
+      toast(f._sugg?'Added, make it yours':'Added');
+      render(); return;
+    }
+  }
   const fbok=e.target.closest('[data-fbok]'); if(fbok){ brief.steps[cur].fb[fbok.dataset.fbok].state='confirmed'; toast('Confirmed'); render(); return; }
   if(e.target.closest('[data-examok]')){ brief._examOk = true; toast('Noted, thank you'); return; }
+  if(e.target.closest('[data-addprod]')){ brief.steps[cur].products.push({name:"", role:"DEFINE", state:"review", facts:[], _new:true}); render(); return; }
+  if(e.target.closest('[data-addfb]')){ brief.steps[cur].fb.push({f:"", b:"", state:"review", _new:true}); render(); return; }
 });
-document.addEventListener('input',e=>{ const ed=e.target.closest('[data-edit]'); if(ed){ const f=getField(ed.dataset.edit); if(f) f.value=ed.value; } });
+document.addEventListener('input',e=>{
+  const ed=e.target.closest('[data-edit]'); if(ed){ const f=getField(ed.dataset.edit); if(f) f.value=ed.value; return; }
+  const pn=e.target.closest('[data-pname]'); if(pn){ brief.steps[cur].products[pn.dataset.pname].name=pn.value; return; }
+  const ff=e.target.closest('[data-fbf]'); if(ff){ brief.steps[cur].fb[ff.dataset.fbf].f=ff.value; return; }
+  const fb2=e.target.closest('[data-fbb]'); if(fb2){ brief.steps[cur].fb[fb2.dataset.fbb].b=fb2.value; return; }
+  const ec=e.target.closest('[data-examcomment]'); if(ec){ brief._examComment=ec.value; return; }
+});
 document.addEventListener('change',e=>{ const r=e.target.closest('[data-role]'); if(r){ brief.steps[cur].products[r.dataset.role].role=r.value; } });
 document.getElementById('backbtn').onclick=()=>{ if(cur>0){cur--;render();} };
 document.getElementById('nextbtn').onclick=()=>{ if(cur<brief.steps.length-1){cur++;render();} else if(window.__dispatchMode){ dispatchSubmit(); } else { toast('Brief submitted. Thank you.'); } };
@@ -653,7 +691,9 @@ function _f(df, fallbackLabel){
   const label = df.label || fallbackLabel || "";
   const type = (df.value && df.value.length > 90) ? "textarea" : "text";
   const o = F(label, df.why || "", (df.source && df.source.label) || "From Small Circle", type, df.value || "", _stFrom[df.state] || "review");
-  o._id = df.id; return o;
+  o._id = df.id;
+  if (df.suggestions && df.suggestions.length) o._sugg = df.suggestions.map(x=>({kind:x.kind,label:x.label,text:x.text}));
+  return o;
 }
 function _sec(doc, id){ return doc.sections.find(s=>s.id===id) || null; }
 
@@ -670,8 +710,19 @@ function hydrateFromDispatch(doc){
     hint:"Your brand history becomes an interactive <b>timeline</b>. Review the events below, and edit, reorder, or add your own.",
     intro:_f(story.intro,"Brand introduction"), founder:_f(story.founder,"Founder spotlight"),
     timeline: story.timeline.map(t=>({date:t.date, title:t.title, desc:t.desc, state:_stFrom[t.state]||"review", _id:t.id})) });
-  steps.push({ id:"production", nav:"How it's made", sub:"Process steps, terroir", kind:"stub",
-    stubnote:"We draft the production walkthrough with you after this brief comes back. Nothing to review here yet." });
+  const prod = _sec(doc,"production");
+  const prodFields = [];
+  if(prod){
+    if(prod.intro && (prod.intro.value || (prod.intro.suggestions||[]).length)){ const pf=_f(prod.intro,"Production intro"); pf._id="production.intro"; pf.type="textarea"; prodFields.push(pf); }
+    (prod.steps||[]).forEach((st,i)=>{
+      const sf=F(`Step ${i+1}, ${st.title}`, st.why||"", (st.source&&st.source.label)||"From our research", "textarea", st.desc||"", _stFrom[st.state]||"review");
+      sf._id=`production.steps.${st.id}`; sf._title=st.title; prodFields.push(sf);
+    });
+  }
+  if(prodFields.length) steps.push({ id:"production", nav:"How it's made", sub:"Production, step by step", kind:"fields",
+    hint:"The production story as steps a learner can retell. Confirm or fix each one.", fields: prodFields });
+  else steps.push({ id:"production", nav:"How it's made", sub:"Production, step by step", kind:"stub",
+    stubnote:"Our research didn't surface enough verified production detail, so we left this open rather than guessing. We'll draft it together after this brief comes back, or add anything you have in the note on the final step." });
   if(lineup) steps.push({ id:"lineup", nav:"The lineup", sub:"Products, roles, facts", kind:"lineup",
     hint:"Each product becomes its own card. Check the <b>selling role</b> and the details for each.",
     products: lineup.products.map(p=>({name:p.name, role:p.role, state:_stFrom[p.state]||"review", facts:(p.facts||[]).map(f=>Array.isArray(f)?f:[f.k,f.v]), _id:p.id})) });
@@ -689,8 +740,15 @@ function applyBackToDispatch(){
   const basics = _sec(doc,"basics"), story = _sec(doc,"story"), lineup = _sec(doc,"lineup"),
         selling = _sec(doc,"selling"), exam = _sec(doc,"exam");
   const put = (docField, af) => { if(!docField||!af) return; docField.value = af.value; docField.state = _stTo[af.state] || "prefilled"; };
+  const prodSec = _sec(doc,"production");
   brief.steps.forEach(s=>{
     if(s.id==="basics" && basics) s.fields.forEach(af=>put(basics.fields.find(x=>x.id===af._id), af));
+    if(s.id==="production" && s.kind==="fields" && prodSec) s.fields.forEach(af=>{
+      if(af._id==="production.intro"){ put(prodSec.intro, af); return; }
+      const stId=(af._id||"").replace("production.steps.","");
+      const d=(prodSec.steps||[]).find(x=>x.id===stId);
+      if(d){ d.desc=af.value; d.state=_stTo[af.state]||"prefilled"; }
+    });
     if(s.id==="story" && story){
       put(story.intro, s.intro); put(story.founder, s.founder);
       const kept = [];
@@ -703,14 +761,24 @@ function applyBackToDispatch(){
       });
       story.timeline = kept;
     }
-    if(s.id==="lineup" && lineup) s.products.forEach(ap=>{ const d=lineup.products.find(x=>x.id===ap._id);
-      if(d){ d.role=ap.role; d.state=_stTo[ap.state]||"prefilled"; } });
+    if(s.id==="lineup" && lineup) s.products.forEach((ap,pi)=>{
+      if(ap._id){ const d=lineup.products.find(x=>x.id===ap._id);
+        if(d){ d.role=ap.role; d.state=_stTo[ap.state]||"prefilled"; } }
+      else if((ap.name||"").trim()){ lineup.products.push({ id:"p_c"+(pi+1), name:ap.name.trim(), role:ap.role||"DEFINE",
+        facts:(ap.facts||[]).map(f=>Array.isArray(f)?{k:f[0],v:f[1]}:f),
+        why:"Client-added product", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" }); }
+    });
     if(s.id==="selling" && selling){
-      s.fb.forEach((ax,i)=>{ if(selling.fb[i]) selling.fb[i].state=_stTo[ax.state]||"prefilled"; });
+      s.fb.forEach((ax,i)=>{
+        if(selling.fb[i]){ selling.fb[i].state=_stTo[ax.state]||"prefilled"; }
+        else if((ax.f||"").trim()||(ax.b||"").trim()){ selling.fb.push({ f:(ax.f||"").trim(), b:(ax.b||"").trim(),
+          why:"Client-added pairing", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" }); }
+      });
       put(selling.awards, s.awards);
     }
   });
   if(exam && brief._examOk) exam.items.forEach(i=>{ i.state = "confirmed"; });
+  if(exam && (brief._examComment||"").trim()) exam.client_comment = brief._examComment.trim();
 }
 
 function dispatchFail(msg){
