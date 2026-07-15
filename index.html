@@ -109,8 +109,10 @@
   .sp-needs{background:#F2F0EB;color:var(--sub);border:1px dashed var(--line)} .sp-needs .d{background:var(--faint)}
   .source{font-size:11.5px;color:var(--faint);margin-bottom:10px;display:flex;align-items:center;gap:6px;letter-spacing:0}
   .source svg{opacity:.7}
-  .field input[type=text],.field textarea,.field select{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:12px 14px;resize:vertical;line-height:1.55;letter-spacing:-.006em}
-  .field textarea:focus,.field input:focus,.field select:focus{outline:none;border-color:var(--ink);background:#fff}
+  .field input[type=text],.field textarea,.field select,.internalbox textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:12px 14px;resize:vertical;line-height:1.55;letter-spacing:-.006em}
+  .internalbox textarea{background:#fff}
+  .internalbox textarea::placeholder{color:var(--faint)}
+  .field textarea:focus,.field input:focus,.field select:focus,.internalbox textarea:focus{outline:none;border-color:var(--ink);background:#fff}
   .frow{display:flex;gap:9px;margin-top:13px;align-items:center;flex-wrap:wrap}
 
   /* pill buttons — brand kit */
@@ -157,7 +159,15 @@
   .pname{font-size:18px;font-weight:600;letter-spacing:-.02em}
   .roletag{display:flex;align-items:center;gap:8px;margin:11px 0 4px}
   .roletag label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
-  .roletag select{width:auto;padding:6px 30px 6px 12px;font-weight:600;font-size:12.5px;color:var(--flare-deep);background:var(--flare-wash);border:1px solid var(--flare);border-radius:999px}
+  .roletag select{width:auto;max-width:min(100%,320px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 30px 6px 12px;font-weight:600;font-size:12.5px;color:var(--flare-deep);background:var(--flare-wash);border:1px solid var(--flare);border-radius:999px}
+  .rolehint{font-size:12.5px;color:var(--sub);margin:2px 0 6px;line-height:1.45}
+  .rolehint b{color:var(--flare-deep);font-weight:600}
+  .wants{list-style:none;margin-top:12px}
+  .wants li{font-size:13.5px;padding:9px 0 9px 20px;position:relative;border-top:1px solid var(--line2)}
+  .wants li:first-child{border-top:none}
+  .wants li::before{content:"";position:absolute;left:3px;top:16px;width:6px;height:6px;border-radius:50%;background:var(--flare)}
+  .wants li b{font-weight:600}
+  .wants li span{color:var(--sub);margin-left:7px}
   .facts{list-style:none;margin:8px 0 0}
   .facts li{font-size:13.5px;color:var(--ink);padding:7px 0 7px 20px;position:relative;border-top:1px solid var(--line2)}
   .facts li:first-child{border-top:none}
@@ -271,7 +281,7 @@
     main{padding:22px 16px 100px}
     .sechint{padding:12px 14px;font-size:13px;border-radius:11px}
     .field{padding:16px 16px;border-radius:14px}
-    .field input[type=text],.field textarea,.field select{font-size:16px;padding:12px 13px}
+    .field input[type=text],.field textarea,.field select,.internalbox textarea{font-size:16px;padding:12px 13px}
     .fhead{flex-wrap:wrap;gap:8px}
     .frow{gap:8px}
     .btn{padding:11px 16px;font-size:13px} .btn.sm{padding:9px 14px}
@@ -435,6 +445,9 @@ const brief = {
       marks:["Additive-Free","100% Blue Agave","Estate Grown"],
       awards:F("Awards & accolades","Optional. Title, score, and an image if you have one. SGWS lists these on the selling screen.","We'll add any you send","text","(none on file yet — add if available)","needs") },
 
+    { id:"assets", nav:"Assets & links", sub:"Logo, imagery, sell sheets", kind:"assets",
+      hint:"Links beat attachments: when you update a file at the same link, your course stays current without a rebuild." },
+
     { id:"exam", nav:"Knowledge check", sub:"Approve our draft quiz", kind:"exam" },
   ]
 };
@@ -451,8 +464,8 @@ function tally(){
   brief.steps.forEach(s=>{
     if(s.kind==='fields'){ s.fields.forEach(one); }
     if(s.kind==='story'){ [s.intro,s.founder].forEach(one); s.timeline.forEach(t=>{total++; if(t.state==='confirmed')done++;}); }
-    if(s.kind==='lineup'){ s.products.forEach(p=>{total++; if(p.state==='confirmed')done++;}); }
-    if(s.kind==='selling'){ s.fb.forEach(x=>{total++; if(x.state==='confirmed')done++;}); one(s.awards); }
+    if(s.kind==='lineup'){ if(s.intro)one(s.intro); s.products.forEach(p=>{total++; if(p.state==='confirmed')done++;}); }
+    if(s.kind==='selling'){ s.fb.forEach(x=>{total++; if(x.state==='confirmed')done++;}); one(s.awards); if(s.channel)one(s.channel); }
   });
   return {total,done,needsYou,pct: total? Math.round(done/total*100):0};
 }
@@ -461,8 +474,8 @@ function stepStatus(s){
   let items=[], done=0;
   if(s.kind==='fields') items=s.fields.map(f=>f.state);
   else if(s.kind==='story'){ items=[s.intro.state,s.founder.state,...s.timeline.map(t=>t.state)]; }
-  else if(s.kind==='lineup') items=s.products.map(p=>p.state);
-  else if(s.kind==='selling'){ items=[...s.fb.map(x=>x.state),s.awards.state]; }
+  else if(s.kind==='lineup') items=[...(s.intro?[s.intro.state]:[]),...s.products.map(p=>p.state)];
+  else if(s.kind==='selling'){ items=[...s.fb.map(x=>x.state),s.awards.state,...(s.channel?[s.channel.state]:[])]; }
   else return s.kind==='exam'?'internal':'none';
   done=items.filter(x=>x==='confirmed').length;
   if(done===0) return 'none';
@@ -560,6 +573,7 @@ function render(){
     else if(s.kind==='lineup') m+=lineupHTML(s);
     else if(s.kind==='selling') m+=sellingHTML(s);
     else if(s.kind==='stub') m+=`<div class="internalbox"><div class="lbl">We'll build this with you</div><p style="margin-top:10px;color:var(--sub);font-size:14px">${s.stubnote}</p><div style="margin-top:14px"><textarea rows="3" data-stubnote placeholder="Anything you can share now helps: process steps, equipment, timings, what makes it yours...">${brief._stubNote||''}</textarea></div></div>`;
+    else if(s.kind==='assets') m+=assetsHTML();
     else if(s.kind==='exam') m+=examHTML();
   }
   const mainEl=document.getElementById('main');
@@ -567,8 +581,8 @@ function render(){
   // one-shot confirm animations
   brief.steps.forEach(st=>{ ['fields'].includes(st.kind)&&st.fields&&st.fields.forEach(f=>delete f._flash);
     if(st.kind==='story'){delete st.intro._flash;delete st.founder._flash;st.timeline.forEach(t=>delete t._flash);}
-    if(st.kind==='lineup')st.products.forEach(x=>delete x._flash);
-    if(st.kind==='selling'){st.fb.forEach(x=>delete x._flash);delete st.awards._flash;} });
+    if(st.kind==='lineup'){if(st.intro)delete st.intro._flash;st.products.forEach(x=>delete x._flash);}
+    if(st.kind==='selling'){st.fb.forEach(x=>delete x._flash);delete st.awards._flash;if(st.channel)delete st.channel._flash;} });
   if(cur!==lastStep){ mainEl.classList.remove('stepin'); void mainEl.offsetWidth; mainEl.classList.add('stepin'); lastStep=cur; }
 
   const nb=document.getElementById('nextbtn');
@@ -589,8 +603,8 @@ function submitSummaryHTML(){
     const chk=(f)=>{ if(!(f.state==='confirmed'||f._skipped))open++; };
     if(st.kind==='fields')st.fields.forEach(chk);
     if(st.kind==='story'){chk(st.intro);chk(st.founder);st.timeline.forEach(t=>{if(t.state!=='confirmed')open++;});}
-    if(st.kind==='lineup')st.products.forEach(p=>{if(p.state!=='confirmed')open++;});
-    if(st.kind==='selling'){st.fb.forEach(x=>{if(x.state!=='confirmed')open++;});chk(st.awards);}
+    if(st.kind==='lineup'){if(st.intro)chk(st.intro);st.products.forEach(p=>{if(p.state!=='confirmed')open++;});}
+    if(st.kind==='selling'){st.fb.forEach(x=>{if(x.state!=='confirmed')open++;});chk(st.awards);if(st.channel)chk(st.channel);}
     return open>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><span>${st.nav} · <b>${open}</b> still open</span><button class="btn sm" data-go="${i}">Review</button></div>`:'';
   }).join('');
   return `<div class="eyebrow">Almost there</div><h1>Before you send it back</h1>
@@ -611,7 +625,7 @@ function submittedHTML(){
     <p style="margin-top:22px;font-size:13px;color:var(--faint)">Need to change something after submitting? Reply to your invite email.</p></div>`;
 }
 function welcomeHTML(){
-  const covers=brief.steps.filter(s=>['fields','story','lineup','selling','stub'].includes(s.kind));
+  const covers=brief.steps.filter(s=>['fields','story','lineup','selling','stub','assets'].includes(s.kind));
   const items=covers.map((s,i)=>`<div class="wc"><span class="wn">${String(i+1).padStart(2,'0')}</span><div><b>${s.nav}</b><span>${s.sub}</span></div></div>`).join('');
   const t=tally();
   const drafted=t.total-t.needsYou;
@@ -651,8 +665,21 @@ function storyHTML(s){
   h+=`</div><div class="addrow"><button class="btn" data-addtl>＋ Add an event</button></div>`;
   return h;
 }
+// One selling job per product. Worded to fit any category (wine, agave,
+// whiskey, liqueur, RTD), never a category-specific term.
+const ROLE_HELP={
+  DEFINE:"The flagship. States what the brand stands for.",
+  ANCHOR:"The everyday core. Your reliable volume seller.",
+  BROADEN:"Reaches new guests and new occasions.",
+  RECRUIT:"The easy entry point that wins first-time buyers.",
+  CURIOSITY:"The conversation starter that earns a first taste.",
+  SERIOUS:"The credibility pick for enthusiasts and collectors.",
+  TWILIGHT:"The celebration and special-occasion pick.",
+  DEPTH:"The rare, limited trade-up at the top of the range.",
+};
 function lineupHTML(s){
   let h='';
+  if(s.intro) h+=fieldCard(s.intro,'intro','lineup');
   s.products.forEach((p,i)=>{
     const nameEl = p._new ? `<input type="text" data-pname="${i}" placeholder="Product name" value="${(p.name||'').replace(/"/g,'&quot;')}" style="font-weight:700;font-size:16px">` : `<div class="pname">${p.name}</div>`;
     h+=`<div class="prod ${p.state==='confirmed'?'confirmed':''}">
@@ -660,9 +687,10 @@ function lineupHTML(s){
       <div>
         <div class="phead">${nameEl}${pill(p.state)}</div>
         <div class="roletag"><label>Selling role</label>
-          <select data-role="${i}">${['DEFINE','ANCHOR','SERIOUS','BROADEN','CURIOSITY','RECRUIT','TWILIGHT','DEPTH'].map(r=>`<option ${r===p.role?'selected':''}>${r}</option>`).join('')}</select>
-          <span class="why">i<span class="whytip">We assign each product one clear selling job so a rep always knows the right pour. Confirm or change ours.</span></span>
+          <select data-role="${i}" aria-label="Selling role">${Object.keys(ROLE_HELP).map(r=>`<option value="${r}" ${r===p.role?'selected':''}>${r} · ${ROLE_HELP[r]}</option>`).join('')}</select>
+          <span class="why">i<span class="whytip">Every product gets one clear selling job so a rep always knows which bottle fits the moment. Open the menu to see what each role means, and change ours if it reads wrong.</span></span>
         </div>
+        <div class="rolehint"><b>${p.role}</b> · ${ROLE_HELP[p.role]||''}</div>
         <ul class="facts">${p.facts.map(f=>`<li><span class="k">${f[0]}</span>${f[1]}</li>`).join('')}</ul>
         <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button>`}</div>
       </div></div>`;
@@ -683,18 +711,35 @@ function sellingHTML(s){
   if(window.__dispatchMode) h+=`<div class="addrow" style="margin-top:10px"><button class="btn" data-addfb>＋ Add a pairing</button></div>`;
   h+=`<h1 style="font-size:18px;margin:28px 0 2px">Proof marks</h1><p class="lead" style="font-size:14px">Pulled from your positioning. These become trust badges in the selling lesson.</p><div class="marks">${s.marks.map(m=>`<span class="mark"><span class="mk"></span>${m}</span>`).join('')}</div>`;
   h+=`<div style="margin-top:24px">${fieldCard(s.awards,'awards','selling')}</div>`;
+  if(s.channel) h+=`<div style="margin-top:16px">${fieldCard(s.channel,'channel','selling')}</div>`;
   return h;
 }
+function assetsHTML(){
+  const wants=[
+    ["Brand logo","vector (.EPS or .SVG) or a transparent .PNG"],
+    ["Header image","the first image learners see: high resolution, no words on it, lifestyle over bottle shot so it stays current"],
+    ["Brand identity or style guide","if you have one, it keeps the course on-brand"],
+    ["Bottle shots","one per product, high-res .PNG with transparent background"],
+    ["Lifestyle imagery","6 or more images we can pull from; they fill the design between lessons"],
+    ["Sell sheets, tech sheets, accolade sheets","links beat attachments: update the file at the same link and the course stays current"],
+    ["Website, socials, contact","your site or content hub, plus a monitored email for the course's final page"],
+  ];
+  return `<div class="internalbox"><div class="lbl">What we'll ask you for</div>
+    <ul class="wants">${wants.map(w=>`<li><b>${w[0]}</b><span>${w[1]}</span></li>`).join('')}</ul>
+    <p style="margin-top:14px;color:var(--sub);font-size:13px">Paste any links you have handy below (Dropbox, Drive, Box, your site). Please avoid links that expire. Whatever you skip, we'll collect together, nothing blocks your submission.</p>
+    <div style="margin-top:10px"><textarea rows="5" data-assetnote placeholder="Logo: &#10;Header image: &#10;Sell sheet: &#10;Website + Instagram: ">${brief._assetNote||''}</textarea></div>
+  </div>`;
+}
 function examHTML(){
-  const intro = `<div class="eyebrow">Step ${cur} of ${brief.steps.length-1}</div><h1>Knowledge check</h1>
-    <div class="sechint"><span class="ic">✎</span><div>A short check closes the course. Here's a first draft based on what you confirmed, have a look and flag anything you'd change.</div></div>`;
+  // render() already prints the step eyebrow + title; adding them here too
+  // put "Knowledge check" on the page twice (owner bug report 2026-07-14).
+  const intro = `<div class="sechint"><span class="ic">✎</span><div>A short check closes the course: <b>six questions max</b>, learners pass at <b>80%</b> and can retake it. Here's a first draft based on what you confirmed, have a look and flag anything you'd change.</div></div>`;
   if(brief._exam){
     const qs = brief._exam.length ? brief._exam.map((q,i)=>`<div class="exq"><div class="q">${i+1} &nbsp;${q.stem}</div>
         <div class="opts">${q.options.map(o=>`<div class="opt ${o.correct?'correct':''}">${o.text}</div>`).join('')}</div></div>`).join('')
       : `<p style="color:var(--sub);font-size:14px">We'll draft the knowledge check from the sections you confirm here.</p>`;
     return intro + `<div class="internalbox"><div class="lbl">Draft preview</div>${qs}
-      <p style="margin-top:14px;color:var(--sub);font-size:13px">Learners pass at 80% and can retake it.</p>
-      <div class="frow">${brief._examOk?`<span class="statepill sp-confirmed"><span class="d"></span>Approved, we'll finalize the questions</span>`:`<button class="btn pri" data-examok>Looks good</button>`}</div>
+      <div class="frow" style="margin-top:16px">${brief._examOk?`<span class="statepill sp-confirmed"><span class="d"></span>Approved, we'll finalize the questions</span>`:`<button class="btn pri" data-examok>Looks good</button>`}</div>
       <div style="margin-top:14px"><div class="fbf" style="margin-bottom:6px">Anything to change or add? Tell us here.</div>
       <textarea rows="3" data-examcomment placeholder="e.g. Question 2 should mention the cold brew, and please add one about the serving ritual.">${brief._examComment||''}</textarea></div>
     </div>`;
@@ -704,7 +749,7 @@ function examHTML(){
         <div class="opts"><div class="opt correct">Blanco — the additive-free house statement</div><div class="opt">Totality Reserve — the eclipse single barrel</div><div class="opt">Añejo — the aged sipper</div><div class="opt">Cristalino — the aged-clear curiosity</div></div></div>
       <div class="exq"><div class="q">2 &nbsp;What makes the Totality Reserve unrepeatable?</div>
         <div class="opts"><div class="opt correct">It's bottled only during a real total eclipse, dated and numbered</div><div class="opt">It's the cheapest expression</div><div class="opt">It's aged the shortest</div><div class="opt">It uses added color</div></div></div>
-      <p style="margin-top:14px;color:var(--sub);font-size:13px">Plus four more, drawn from your story, production, and lineup. Learners pass at 80% and can retake it.</p>
+      <p style="margin-top:14px;color:var(--sub);font-size:13px">Plus four more, drawn from your story, production, and lineup.</p>
       <div class="frow"><button class="btn pri" onclick="toast('Noted, thank you')">Looks good</button><button class="btn">Suggest a change</button></div>
     </div>`;
 }
@@ -712,29 +757,33 @@ function examHTML(){
 // ---------- Interactions ----------
 function toast(msg){ const t=document.getElementById('toast'); document.getElementById('toastmsg').textContent=msg; t.classList.add('show'); clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),1700); }
 function getField(ref){ const [ctx,idx]=ref.split(':'); const s=brief.steps[cur];
-  if(ctx==='basics') return s.fields[idx];
-  if(ctx==='intro') return s.intro; if(ctx==='founder') return s.founder;
-  if(ctx==='awards') return s.awards; return null; }
+  // refs are "<section>:<slot>" where slot is a NAMED slot (intro/founder/
+  // awards/channel) or a numeric index into a fields-kind step.
+  if(idx==='intro') return s.intro||null;
+  if(idx==='founder') return s.founder||null;
+  if(idx==='awards') return s.awards||null;
+  if(idx==='channel') return s.channel||null;
+  return (s.fields&&s.fields[idx])||null; }
 
 document.addEventListener('click',e=>{
   const go=e.target.closest('[data-go]'); if(go){ cur=+go.dataset.go; closeMenu(); render(); return; }
-  const c=e.target.closest('[data-confirm]'); if(c){ const f=getField(c.dataset.confirm); f.state='confirmed'; f._flash=true; toast('Confirmed'); render(); return; }
-  const sk=e.target.closest('[data-skip]'); if(sk){ const f=getField(sk.dataset.skip); f._skipped=true; toast("Noted, we'll follow up on this one"); render(); return; }
+  const c=e.target.closest('[data-confirm]'); if(c){ const f=getField(c.dataset.confirm); if(f){f.state='confirmed'; f._flash=true; toast('Confirmed'); render();} return; }
+  const sk=e.target.closest('[data-skip]'); if(sk){ const f=getField(sk.dataset.skip); if(f){f._skipped=true; toast("Noted, we'll follow up on this one"); render();} return; }
   if(e.target.closest('[data-confirmstep]')){
     const st=brief.steps[cur]; let n=0;
     const ok=(f)=>{ if((f.value||f.desc||f.name||f.f||'').trim()&&f.state==='review'){f.state='confirmed';f._flash=true;n++;} };
     if(st.kind==='fields') st.fields.forEach(ok);
     if(st.kind==='story'){ ok(st.intro); ok(st.founder); st.timeline.forEach(t=>{if(t.state==='review'){t.state='confirmed';t._flash=true;n++;}}); }
-    if(st.kind==='lineup') st.products.forEach(pr=>{if(pr.state==='review'){pr.state='confirmed';pr._flash=true;n++;}});
-    if(st.kind==='selling'){ st.fb.forEach(x=>{if(x.state==='review'){x.state='confirmed';x._flash=true;n++;}}); ok(st.awards); }
+    if(st.kind==='lineup'){ if(st.intro)ok(st.intro); st.products.forEach(pr=>{if(pr.state==='review'){pr.state='confirmed';pr._flash=true;n++;}}); }
+    if(st.kind==='selling'){ st.fb.forEach(x=>{if(x.state==='review'){x.state='confirmed';x._flash=true;n++;}}); ok(st.awards); if(st.channel)ok(st.channel); }
     toast(`Section confirmed, ${n} item${n===1?'':'s'}`); render(); return;
   }
   if(e.target.closest('[data-submitanyway]')){ brief._confirmSubmit=false; if(window.__dispatchMode){dispatchSubmit();}else{brief._submitted=true;render();} return; }
   if(e.target.closest('[data-resume]')){ brief._confirmSubmit=false; const idx=brief.steps.findIndex((st,i)=>i>0&&stepStatus(st)!=='done'&&stepStatus(st)!=='internal'); cur=idx>0?idx:1; render(); return; }
-  const us=e.target.closest('[data-unskip]'); if(us){ const f=getField(us.dataset.unskip); delete f._skipped; render(); return; }
-  const u=e.target.closest('[data-unconfirm]'); if(u){ getField(u.dataset.unconfirm).state='review'; render(); return; }
+  const us=e.target.closest('[data-unskip]'); if(us){ const f=getField(us.dataset.unskip); if(f){delete f._skipped; render();} return; }
+  const u=e.target.closest('[data-unconfirm]'); if(u){ const f=getField(u.dataset.unconfirm); if(f){f.state='review'; render();} return; }
   const fo=e.target.closest('[data-focus]'); if(fo){ const el=document.querySelector(`[data-edit="${fo.dataset.focus}"]`); if(el){el.focus();} return; }
-  const am=e.target.closest('[data-am]'); if(am){ const [ctx,idx,mode]=am.dataset.am.split(':'); const f=getField(ctx+':'+idx); f._m=mode; if(mode==='up'||mode==='link'){f.state='needs';} render(); return; }
+  const am=e.target.closest('[data-am]'); if(am){ const [ctx,idx,mode]=am.dataset.am.split(':'); const f=getField(ctx+':'+idx); if(f){f._m=mode; if(mode==='up'||mode==='link'){f.state='needs';} render();} return; }
   const tok=e.target.closest('[data-tlok]'); if(tok){ brief.steps[cur].timeline[tok.dataset.tlok].state='confirmed'; toast('Event confirmed'); render(); return; }
   const tun=e.target.closest('[data-tlunc]'); if(tun){ brief.steps[cur].timeline[tun.dataset.tlunc].state='review'; render(); return; }
   if(e.target.closest('[data-addtl]')){ brief.steps[cur].timeline.push({date:"Year",title:"New event",desc:"Describe what happened...",state:"review"}); toast('Event added'); render(); return; }
@@ -764,8 +813,9 @@ document.addEventListener('input',e=>{
   const fb2=e.target.closest('[data-fbb]'); if(fb2){ brief.steps[cur].fb[fb2.dataset.fbb].b=fb2.value; return; }
   const ec=e.target.closest('[data-examcomment]'); if(ec){ brief._examComment=ec.value; return; }
   const sn=e.target.closest('[data-stubnote]'); if(sn){ brief._stubNote=sn.value; return; }
+  const an=e.target.closest('[data-assetnote]'); if(an){ brief._assetNote=an.value; return; }
 });
-document.addEventListener('change',e=>{ const r=e.target.closest('[data-role]'); if(r){ brief.steps[cur].products[r.dataset.role].role=r.value; } });
+document.addEventListener('change',e=>{ const r=e.target.closest('[data-role]'); if(r){ brief.steps[cur].products[r.dataset.role].role=r.value; render(); } });
 document.getElementById('backbtn').onclick=()=>{ if(cur>0){cur--;render();} };
 document.getElementById('nextbtn').onclick=()=>{
   if(cur<brief.steps.length-1){cur++;render();return;}
@@ -822,7 +872,7 @@ function hydrateFromDispatch(doc){
     hint:"The essentials for your module. Review each field and adjust anything that is not right.",
     fields: basics.fields.map(f=>_f(f)) });
   if(story) steps.push({ id:"story", nav:"Your story", sub:"Intro, founder, timeline", kind:"story",
-    hint:"Your brand history becomes an interactive <b>timeline</b>. Review the events below, and edit, reorder, or add your own.",
+    hint:"Your brand history becomes an interactive <b>timeline</b>. Review the events below, and edit, reorder, or add your own. A line or two in the founder's own words is gold if you have it.",
     intro:_f(story.intro,"Brand introduction"), founder:_f(story.founder,"Founder spotlight"),
     timeline: story.timeline.map(t=>({date:t.date, title:t.title, desc:t.desc, state:_stFrom[t.state]||"review", _id:t.id})) });
   const prod = _sec(doc,"production");
@@ -839,12 +889,23 @@ function hydrateFromDispatch(doc){
   else steps.push({ id:"production", nav:"How it's made", sub:"Production, step by step", kind:"stub",
     stubnote:"Our research didn't surface enough verified production detail, so we left this open rather than guessing. We'll draft it together after this brief comes back, or add anything you have in the note on the final step." });
   if(lineup) steps.push({ id:"lineup", nav:"The lineup", sub:"Products, roles, facts", kind:"lineup",
-    hint:"Each product becomes its own card. Check the <b>selling role</b> and the details for each.",
+    hint:"Each product becomes its own card. Check the <b>selling role</b> for each (the menu explains every role), and aim for 3 to 5 strong facts per product: production or aging, appearance, flavor, how to serve it.",
+    ...(lineup.intro?{intro:_f(lineup.intro,"Lineup introduction")}:{}),
     products: lineup.products.map(p=>({name:p.name, role:p.role, state:_stFrom[p.state]||"review", facts:(p.facts||[]).map(f=>Array.isArray(f)?f:[f.k,f.v]), _id:p.id})) });
   if(selling) steps.push({ id:"selling", nav:"Why it sells", sub:"Features, benefits, awards", kind:"selling",
     hint:"How the brand sells, shown as <b>feature-and-benefit</b> cards. Review and refine the pairings.",
     fb: selling.fb.map(x=>({f:x.f, b:x.b, state:_stFrom[x.state]||"review"})),
-    marks: selling.marks, awards:_f(selling.awards,"Awards & accolades") });
+    marks: selling.marks, awards:_f(selling.awards,"Awards & accolades"),
+    ...(selling.channel?{channel:_f(selling.channel,"On-premise & off-premise playbook")}:{}) });
+  // Any remaining fields-kind sections (e.g. the Spotlight "additional
+  // section") render as generic field steps instead of being dropped.
+  doc.sections.filter(x=>x.kind==="fields" && x.id!=="basics").forEach(x=>{
+    if(!x.fields || !x.fields.length) return;
+    steps.push({ id:x.id, nav:x.title||x.id, sub:x.hint?"":"Optional, but memorable", kind:"fields",
+      ...(x.hint?{hint:x.hint}:{}), fields:x.fields.map(f=>_f(f)) });
+  });
+  steps.push({ id:"assets", nav:"Assets & links", sub:"Logo, imagery, sell sheets", kind:"assets",
+    hint:"Links beat attachments: when you update a file at the same link, your course stays current without a rebuild." });
   steps.push({ id:"exam", nav:"Knowledge check", sub:"Approve our draft quiz", kind:"exam" });
   brief._exam = exam ? exam.items.map(i=>({stem:i.stem, options:i.options})) : [];
   brief.steps = steps;
@@ -857,7 +918,12 @@ function applyBackToDispatch(){
   const put = (docField, af) => { if(!docField||!af) return; docField.value = af.value; docField.state = _stTo[af.state] || "prefilled"; };
   const prodSec = _sec(doc,"production");
   brief.steps.forEach(s=>{
-    if(s.id==="basics" && basics) s.fields.forEach(af=>put(basics.fields.find(x=>x.id===af._id), af));
+    // Generic fields steps (basics, spotlight, any future fields section)
+    // post back by section id + field id. Production is handled below.
+    if(s.kind==="fields" && s.id!=="production"){
+      const sec=_sec(doc, s.id);
+      if(sec && sec.kind==="fields") s.fields.forEach(af=>put(sec.fields.find(x=>x.id===af._id), af));
+    }
     if(s.id==="production" && s.kind==="fields" && prodSec) s.fields.forEach(af=>{
       if(af._id==="production.intro"){ put(prodSec.intro, af); return; }
       const stId=(af._id||"").replace("production.steps.","");
@@ -876,14 +942,18 @@ function applyBackToDispatch(){
       });
       story.timeline = kept;
     }
-    if(s.id==="lineup" && lineup) s.products.forEach((ap,pi)=>{
+    if(s.id==="lineup" && lineup){
+      if(lineup.intro && s.intro) put(lineup.intro, s.intro);
+      s.products.forEach((ap,pi)=>{
       if(ap._id){ const d=lineup.products.find(x=>x.id===ap._id);
         if(d){ d.role=ap.role; d.state=_stTo[ap.state]||"prefilled"; } }
       else if((ap.name||"").trim()){ lineup.products.push({ id:"p_c"+(pi+1), name:ap.name.trim(), role:ap.role||"DEFINE",
         facts:(ap.facts||[]).map(f=>Array.isArray(f)?{k:f[0],v:f[1]}:f),
         why:"Client-added product", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" }); }
-    });
+      });
+    }
     if(s.id==="selling" && selling){
+      if(selling.channel && s.channel) put(selling.channel, s.channel);
       s.fb.forEach((ax,i)=>{
         if(selling.fb[i]){ selling.fb[i].state=_stTo[ax.state]||"prefilled"; }
         else if((ax.f||"").trim()||(ax.b||"").trim()){ selling.fb.push({ f:(ax.f||"").trim(), b:(ax.b||"").trim(),
@@ -896,6 +966,7 @@ function applyBackToDispatch(){
   const noteBits=[];
   if((brief._examComment||"").trim()) noteBits.push(brief._examComment.trim());
   if((brief._stubNote||"").trim()) noteBits.push("Production notes: "+brief._stubNote.trim());
+  if((brief._assetNote||"").trim()) noteBits.push("Asset links: "+brief._assetNote.trim());
   if(exam && noteBits.length) exam.client_comment = noteBits.join("\n");
 }
 
@@ -950,14 +1021,14 @@ async function dispatchSubmit(){
 
 function saveKey(){ return `cb_state_${DBRIEF||'demo'}_${dispatchDoc?dispatchDoc.revision:'0'}`; }
 function snapshotState(){
-  const snap={steps:{},examOk:!!brief._examOk,examComment:brief._examComment||'',stubNote:brief._stubNote||''};
+  const snap={steps:{},examOk:!!brief._examOk,examComment:brief._examComment||'',stubNote:brief._stubNote||'',assetNote:brief._assetNote||''};
   brief.steps.forEach((st,i)=>{
     const rec={};
     const cap=(k,f)=>{ rec[k]={v:f.value??null,s:f.state,sk:!!f._skipped}; };
     if(st.kind==='fields'){ rec.fields=st.fields.map(f=>({v:f.value,s:f.state,sk:!!f._skipped})); }
     if(st.kind==='story'){ cap('intro',st.intro); cap('founder',st.founder); rec.tl=st.timeline.map(t=>({d:t.date,t:t.title,x:t.desc,s:t.state})); }
-    if(st.kind==='lineup'){ rec.prods=st.products.map(p=>({n:p.name,r:p.role,s:p.state,nw:!!p._new})); }
-    if(st.kind==='selling'){ rec.fb=st.fb.map(x=>({f:x.f,b:x.b,s:x.state,nw:!!x._new})); cap('awards',st.awards); }
+    if(st.kind==='lineup'){ if(st.intro)cap('intro',st.intro); rec.prods=st.products.map(p=>({n:p.name,r:p.role,s:p.state,nw:!!p._new})); }
+    if(st.kind==='selling'){ rec.fb=st.fb.map(x=>({f:x.f,b:x.b,s:x.state,nw:!!x._new})); cap('awards',st.awards); if(st.channel)cap('channel',st.channel); }
     snap.steps[i]=rec;
   });
   return snap;
@@ -974,10 +1045,10 @@ function restoreState(){
       if(st.kind==='fields'&&rec.fields) st.fields.forEach((f,j)=>app(f,rec.fields[j]));
       if(st.kind==='story'){ app(st.intro,rec.intro); app(st.founder,rec.founder);
         (rec.tl||[]).forEach((d,j)=>{ if(st.timeline[j]){ st.timeline[j].date=d.d;st.timeline[j].title=d.t;st.timeline[j].desc=d.x;st.timeline[j].state=d.s; } else { st.timeline.push({date:d.d,title:d.t,desc:d.x,state:d.s}); } }); }
-      if(st.kind==='lineup'&&rec.prods) rec.prods.forEach((d,j)=>{ if(st.products[j]){ st.products[j].role=d.r;st.products[j].state=d.s; if(d.nw)st.products[j].name=d.n; } else { st.products.push({name:d.n,role:d.r,state:d.s,facts:[],_new:true}); } });
-      if(st.kind==='selling'){ (rec.fb||[]).forEach((d,j)=>{ if(st.fb[j]){ st.fb[j].state=d.s; if(d.nw){st.fb[j].f=d.f;st.fb[j].b=d.b;} } else { st.fb.push({f:d.f,b:d.b,state:d.s,_new:true}); } }); app(st.awards,rec.awards); }
+      if(st.kind==='lineup'){ if(st.intro)app(st.intro,rec.intro); (rec.prods||[]).forEach((d,j)=>{ if(st.products[j]){ st.products[j].role=d.r;st.products[j].state=d.s; if(d.nw)st.products[j].name=d.n; } else { st.products.push({name:d.n,role:d.r,state:d.s,facts:[],_new:true}); } }); }
+      if(st.kind==='selling'){ (rec.fb||[]).forEach((d,j)=>{ if(st.fb[j]){ st.fb[j].state=d.s; if(d.nw){st.fb[j].f=d.f;st.fb[j].b=d.b;} } else { st.fb.push({f:d.f,b:d.b,state:d.s,_new:true}); } }); app(st.awards,rec.awards); if(st.channel)app(st.channel,rec.channel); }
     });
-    brief._examOk=snap.examOk; brief._examComment=snap.examComment; brief._stubNote=snap.stubNote;
+    brief._examOk=snap.examOk; brief._examComment=snap.examComment; brief._stubNote=snap.stubNote; brief._assetNote=snap.assetNote||'';
     return true;
   }catch(_e){ return false; }
 }
