@@ -737,18 +737,19 @@ function sellingHTML(s){
   return h;
 }
 function fmtBytes(n){ if(!n&&n!==0)return''; if(n<1024)return n+' B'; if(n<1048576)return (n/1024).toFixed(0)+' KB'; if(n<1073741824)return (n/1048576).toFixed(1)+' MB'; return (n/1073741824).toFixed(2)+' GB'; }
+function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function upRow(u,i){
   const st = u.state==='done' ? `<span class="upstate ok">✓ received</span>`
-    : u.state==='failed' ? `<span class="upstate bad">${u.err||'failed'}</span> <button class="btn sm ghost" data-upretry="${i}">Try again</button>`
+    : u.state==='failed' ? `<span class="upstate bad">${esc(u.err||'failed')}</span> <button class="btn sm ghost" data-upretry="${i}">Try again</button>`
     : `<span class="upstate">${u.state==='uploading'?(u.pct||0)+'%':'starting…'}</span>`;
   return `<div class="uprow" data-uprow="${i}">
-    <div class="upname">${u.name}<span class="upsize">${fmtBytes(u.size)}</span></div>
+    <div class="upname">${esc(u.name)}<span class="upsize">${fmtBytes(u.size)}</span></div>
     <div class="upbar"><i data-upbar="${i}" style="width:${u.state==='done'?100:(u.pct||0)}%"></i></div>
     <div>${st}</div></div>`;
 }
 function uploadsListHTML(){
   const rows=(brief._uploads||[]).map((u,i)=>upRow(u,i)).join('');
-  const received=(brief._received||[]).map(a=>`<div class="uprow done"><div class="upname">${a.name}<span class="upsize">${fmtBytes(a.size_bytes)}</span></div><div class="upbar"><i style="width:100%"></i></div><div><span class="upstate ok">✓ with us</span></div></div>`).join('');
+  const received=(brief._received||[]).map(a=>`<div class="uprow done"><div class="upname">${esc(a.name)}<span class="upsize">${fmtBytes(a.size_bytes)}</span></div><div class="upbar"><i style="width:100%"></i></div><div><span class="upstate ok">✓ with us</span></div></div>`).join('');
   return rows+received;
 }
 function assetsHTML(){
@@ -793,6 +794,7 @@ function addFiles(files){
   brief._uploads=brief._uploads||[];
   const before=brief._uploads.length;
   for(const f of files){
+    if(f.size<=0){ toast(`${f.name} looks empty, check it and try again`); continue; }
     if(f.size>UP_MAX_BYTES){ toast(`${f.name} is over 2 GB, send us a link instead`); continue; }
     if(brief._uploads.length+(brief._received||[]).length>=UP_MAX_COUNT){ toast('That is plenty! Reply to your invite email for the rest.'); break; }
     const u={name:f.name,size:f.size,state:'queued',pct:0,file:f};
@@ -803,15 +805,40 @@ function addFiles(files){
 function pumpUploads(){
   while(upActive<2 && upQueue.length){ const u=upQueue.shift(); upActive++; uploadOne(u).finally(()=>{ upActive--; pumpUploads(); }); }
 }
+async function upConfirm(u){
+  const c=await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}/assets/${encodeURIComponent(u.assetId)}/complete`,{
+    method:'POST', headers:{Authorization:`Bearer ${DTOKEN}`}});
+  const body=await c.json().catch(()=>({}));
+  if(!c.ok||!body.ok){
+    // 413 (server deleted an oversize object) and 404 (asset gone) mean
+    // this asset id is dead: the next retry must start over.
+    if(c.status===413||c.status===404){ u.assetId=null; u.putDone=false; }
+    throw Object.assign(new Error('confirm failed'),{friendly:body.friendly});
+  }
+}
 async function uploadOne(u){
   try{
+    // Confirm-only retry: the bytes already landed, never re-upload them.
+    if(u.putDone&&u.assetId){
+      u.state='uploading'; renderUploads();
+      await upConfirm(u);
+      u.state='done'; u.pct=100; renderUploads(); toast('Received: '+u.name);
+      return;
+    }
     u.state='signing'; renderUploads();
+    // Retry reuses the SAME asset id so a flaky connection never burns
+    // extra upload slots server-side.
+    const signBody=u.assetId?{asset_id:u.assetId}:{name:u.file.name,content_type:u.file.type||'application/octet-stream',size_bytes:u.file.size};
     const r=await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}/assets`,{
       method:'POST',
       headers:{Authorization:`Bearer ${DTOKEN}`,'content-type':'application/json'},
-      body:JSON.stringify({name:u.file.name,content_type:u.file.type||'application/octet-stream',size_bytes:u.file.size})});
+      body:JSON.stringify(signBody)});
     const body=await r.json().catch(()=>({}));
-    if(!r.ok){ u.state='failed'; u.err=body.friendly||"Couldn't start this upload."; renderUploads(); return; }
+    if(body&&body.enabled===false){ u.state='failed'; u.err='Uploads are not switched on yet. Paste links below instead.'; renderUploads(); return; }
+    if(!r.ok||!body.upload_url||!body.asset_id){
+      if(r.status===404&&u.assetId){ u.assetId=null; }
+      u.state='failed'; u.err=body.friendly||"Couldn't start this upload."; renderUploads(); return;
+    }
     u.assetId=body.asset_id; u.state='uploading'; renderUploads();
     await new Promise((resolve,reject)=>{
       const x=new XMLHttpRequest();
@@ -822,12 +849,13 @@ async function uploadOne(u){
       x.onerror=()=>reject(new Error('network hiccup'));
       x.send(u.file);
     });
-    const c=await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}/assets/${encodeURIComponent(u.assetId)}/complete`,{
-      method:'POST', headers:{Authorization:`Bearer ${DTOKEN}`}});
-    if(!c.ok) throw new Error('confirm failed');
+    u.putDone=true;
+    await upConfirm(u);
     u.state='done'; u.pct=100; renderUploads(); toast('Received: '+u.name);
   }catch(err){
-    u.state='failed'; u.err="Didn't go through. Check your connection and try again."; renderUploads();
+    u.state='failed';
+    u.err=(err&&err.friendly)||"Didn't go through. Check your connection and try again.";
+    renderUploads();
   }
 }
 document.addEventListener('click',e=>{
