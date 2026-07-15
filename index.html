@@ -472,7 +472,7 @@ const brief = {
 
 // ---------- State ----------
 let cur = 0;
-let lastStep = -1;
+let lastView = "";
 const stepEl = {};
 
 // completeness: count confirmable items across all steps
@@ -603,7 +603,18 @@ function render(){
     if(st.kind==='story'){delete st.intro._flash;delete st.founder._flash;st.timeline.forEach(t=>delete t._flash);}
     if(st.kind==='lineup'){if(st.intro)delete st.intro._flash;st.products.forEach(x=>delete x._flash);}
     if(st.kind==='selling'){st.fb.forEach(x=>delete x._flash);delete st.awards._flash;if(st.channel)delete st.channel._flash;} });
-  if(cur!==lastStep){ mainEl.classList.remove('stepin'); void mainEl.offsetWidth; mainEl.classList.add('stepin'); lastStep=cur; }
+  // Scroll to top + play the step-in animation ONLY when the VIEW changes
+  // (a new step, the pre-submit summary, or the completion screen), never
+  // on an in-step re-render. Clicking a chip or "Looks right" while
+  // scrolled down must keep the scroll where it is (owner feedback 2026-07-15).
+  const viewKey = brief._submitted ? 'done'
+    : (brief._confirmSubmit && cur===brief.steps.length-1) ? 'confirm'
+    : 'step'+cur;
+  if(viewKey!==lastView){
+    mainEl.classList.remove('stepin'); void mainEl.offsetWidth; mainEl.classList.add('stepin');
+    lastView=viewKey;
+    window.scrollTo(0,0);
+  }
 
   const nb=document.getElementById('nextbtn');
   if(brief._submitted){ document.getElementById('backbtn').style.visibility='hidden'; nb.style.display='none'; }
@@ -614,7 +625,6 @@ function render(){
     nb.textContent = last?(brief._confirmSubmit?'Send it back':'Submit your brief'):'Continue →';
     document.getElementById('foothint').textContent = last?'Submitting sends your brief back to us.':'Saves automatically. Leave and return anytime.';
   }
-  window.scrollTo(0,0);
 }
 
 function submitSummaryHTML(){
