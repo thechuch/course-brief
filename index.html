@@ -161,6 +161,25 @@
   .roletag label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
   .roletag select{width:auto;max-width:min(100%,320px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 30px 6px 12px;font-weight:600;font-size:12.5px;color:var(--flare-deep);background:var(--flare-wash);border:1px solid var(--flare);border-radius:999px}
   .rolehint{font-size:12.5px;color:var(--sub);margin:2px 0 6px;line-height:1.45}
+  /* upload dropzone */
+  .dropzone{margin-top:18px;border:2px dashed var(--flare);border-radius:16px;background:linear-gradient(180deg,#FFFDF7,#fff);padding:34px 22px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s,transform .1s}
+  .dropzone:hover{background:var(--flare-wash)}
+  .dropzone.over{background:var(--flare-wash);border-style:solid;transform:scale(1.005)}
+  .dz-mark{width:44px;height:44px;border-radius:50%;background:#000;box-shadow:0 0 0 2px var(--flare),0 0 22px 3px rgba(241,187,100,.45);margin:0 auto 14px}
+  .dz-line{font-size:15.5px}
+  .dz-or{color:var(--sub)}
+  .dz-browse{color:var(--flare-deep);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+  .dz-note{font-size:12.5px;color:var(--sub);margin-top:8px}
+  .uplist{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .uprow{display:grid;grid-template-columns:minmax(0,1.4fr) 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 15px;font-size:13.5px}
+  .upname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .upsize{color:var(--faint);font-weight:400;font-size:12px;margin-left:8px}
+  .upbar{height:7px;border-radius:5px;background:var(--line);overflow:hidden}
+  .upbar i{display:block;height:100%;background:var(--grad);transition:width .25s ease}
+  .upstate{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .upstate.ok{color:var(--flare-deep);font-weight:700}
+  .upstate.bad{color:#B4544A;font-weight:600}
+  @media(max-width:640px){ .uprow{grid-template-columns:1fr auto;grid-template-rows:auto auto} .upbar{grid-column:1/-1} .dropzone{padding:26px 16px} }
   .rolehint b{color:var(--flare-deep);font-weight:600}
   .wants{list-style:none;margin-top:12px}
   .wants li{font-size:13.5px;padding:9px 0 9px 20px;position:relative;border-top:1px solid var(--line2)}
@@ -343,7 +362,6 @@
   .donewrap .bigmark{width:64px;height:64px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--flare),0 0 40px 4px rgba(241,187,100,.5);margin:0 auto 26px}
   .rm-b{display:flex;overflow:hidden}
   .rm-b i{display:block}
-  .rm-b .needseg{background:repeating-linear-gradient(45deg,var(--flare-wash) 0 4px,var(--flare) 4px 6px)}
 </style>
 </head>
 <body>
@@ -535,8 +553,10 @@ function assetControl(f, ctx, idx){
 
 function render(){
   // rail
+  // No rail title: the top bar already carries brand + module (the long
+  // string wrapped badly in the sidebar, owner feedback 2026-07-15).
   const t=tally();
-  let rh=`<div class="railtitle">${brief.brand} · e-learning module</div>`;
+  let rh='';
   brief.steps.forEach((s,i)=>{
     const st=stepStatus(s);
     const cls=st==='done'?'done':st==='partial'?'partial':st==='internal'?'internal':'';
@@ -546,7 +566,7 @@ function render(){
       <div><div class="st">${s.nav}</div><div class="ss">${s.sub}</div></div></div>`;
   });
   const togo=t.total-t.done;
-  rh+=`<div class="railmeter"><div class="rm-t"><span>Your review</span><b>${t.done}/${t.total}</b></div><div class="rm-b"><i style="width:${t.pct}%"></i><i class="needseg" style="width:${Math.round((t.needsYou/(t.total||1))*100)}%"></i></div><div class="rm-n">${togo===0?'All set, ready to submit':`${togo} quick look${togo===1?'':'s'} to go${t.needsYou?` · ${t.needsYou} need you`:''}`}</div></div>`;
+  rh+=`<div class="railmeter"><div class="rm-t"><span>Your review</span><b>${t.done}/${t.total}</b></div><div class="rm-b"><i style="width:${t.pct}%"></i></div><div class="rm-n">${togo===0?'All set, ready to submit':`${togo} quick look${togo===1?'':'s'} to go${t.needsYou?` · ${t.needsYou} need you`:''}`}</div></div>`;
   document.getElementById('rail').innerHTML=rh;
   const bt=document.getElementById('brandtag'); if(bt) bt.textContent=brief.brand.toUpperCase();
   document.getElementById('topbar').style.width=t.pct+'%';
@@ -629,7 +649,10 @@ function welcomeHTML(){
   const items=covers.map((s,i)=>`<div class="wc"><span class="wn">${String(i+1).padStart(2,'0')}</span><div><b>${s.nav}</b><span>${s.sub}</span></div></div>`).join('');
   const t=tally();
   const drafted=t.total-t.needsYou;
-  const returning=t.done>0;
+  // "Returning" means we restored THEIR saved session, never that seeded
+  // fields counted as done (the old tally check greeted first-time
+  // visitors with "you've handled 3 of 13", owner feedback 2026-07-15).
+  const returning=!!brief._restored;
   const stats=`<div style="display:flex;gap:18px;flex-wrap:wrap;margin:18px 0 6px;font-size:14px">
     <span><b>${drafted}</b> drafted for you</span>
     <span><b>${t.needsYou}</b> only you can add</span>
@@ -637,10 +660,9 @@ function welcomeHTML(){
    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 2px;align-items:center;font-size:12.5px;color:var(--sub)">
     ${pill('review')} we drafted it, give it a look &nbsp; ${pill('confirmed')} done &nbsp; ${pill('needs')} yours to add</div>`;
   return `<div class="welcome">
-    <div class="eyebrow">${brief.brand} · E-Learning Module</div>
     <h1>${returning?'Welcome back.':"Let's shape your course."}</h1>
     <p class="lead">${returning
-      ? `You've handled ${t.done} of ${t.total}. Pick up where you left off, we kept everything.`
+      ? `Everything you added last time is saved. Jump back in anywhere.`
       : `We've already done the first pass: Small Circle drafted this from your calls, your materials, and our research, and every field shows where it came from. Your part is quick: confirm what's right, fix what isn't, and add the few pieces only you have.`}</p>
     ${stats}
     <div class="wcover">${items}</div>
@@ -714,6 +736,21 @@ function sellingHTML(s){
   if(s.channel) h+=`<div style="margin-top:16px">${fieldCard(s.channel,'channel','selling')}</div>`;
   return h;
 }
+function fmtBytes(n){ if(!n&&n!==0)return''; if(n<1024)return n+' B'; if(n<1048576)return (n/1024).toFixed(0)+' KB'; if(n<1073741824)return (n/1048576).toFixed(1)+' MB'; return (n/1073741824).toFixed(2)+' GB'; }
+function upRow(u,i){
+  const st = u.state==='done' ? `<span class="upstate ok">✓ received</span>`
+    : u.state==='failed' ? `<span class="upstate bad">${u.err||'failed'}</span> <button class="btn sm ghost" data-upretry="${i}">Try again</button>`
+    : `<span class="upstate">${u.state==='uploading'?(u.pct||0)+'%':'starting…'}</span>`;
+  return `<div class="uprow" data-uprow="${i}">
+    <div class="upname">${u.name}<span class="upsize">${fmtBytes(u.size)}</span></div>
+    <div class="upbar"><i data-upbar="${i}" style="width:${u.state==='done'?100:(u.pct||0)}%"></i></div>
+    <div>${st}</div></div>`;
+}
+function uploadsListHTML(){
+  const rows=(brief._uploads||[]).map((u,i)=>upRow(u,i)).join('');
+  const received=(brief._received||[]).map(a=>`<div class="uprow done"><div class="upname">${a.name}<span class="upsize">${fmtBytes(a.size_bytes)}</span></div><div class="upbar"><i style="width:100%"></i></div><div><span class="upstate ok">✓ with us</span></div></div>`).join('');
+  return rows+received;
+}
 function assetsHTML(){
   const wants=[
     ["Brand logo","vector (.EPS or .SVG) or a transparent .PNG"],
@@ -724,12 +761,84 @@ function assetsHTML(){
     ["Sell sheets, tech sheets, accolade sheets","links beat attachments: update the file at the same link and the course stays current"],
     ["Website, socials, contact","your site or content hub, plus a monitored email for the course's final page"],
   ];
-  return `<div class="internalbox"><div class="lbl">What we'll ask you for</div>
+  return `<div class="dropzone" data-dzopen tabindex="0" role="button" aria-label="Upload files">
+      <div class="dz-mark"></div>
+      <div class="dz-line"><b>Drop files here</b><span class="dz-or"> or </span><span class="dz-browse">browse your computer</span></div>
+      <div class="dz-note">${window.__dispatchMode?'Any file type, up to 2 GB each. Files land with us instantly.':'Uploads switch on with your live brief link.'}</div>
+      <input type="file" id="dzfile" multiple style="display:none">
+    </div>
+    <div id="uplist" class="uplist">${uploadsListHTML()}</div>
+    <div class="internalbox"><div class="lbl">What helps most</div>
     <ul class="wants">${wants.map(w=>`<li><b>${w[0]}</b><span>${w[1]}</span></li>`).join('')}</ul>
-    <p style="margin-top:14px;color:var(--sub);font-size:13px">Paste any links you have handy below (Dropbox, Drive, Box, your site). Please avoid links that expire. Whatever you skip, we'll collect together, nothing blocks your submission.</p>
+    <p style="margin-top:14px;color:var(--sub);font-size:13px">Prefer links (Dropbox, Drive, Box, your site)? Paste them below, just no links that expire. Whatever you skip, we'll collect together, nothing blocks your submission.</p>
     <div style="margin-top:10px"><textarea rows="5" data-assetnote placeholder="Logo: &#10;Header image: &#10;Sell sheet: &#10;Website + Instagram: ">${brief._assetNote||''}</textarea></div>
   </div>`;
 }
+
+// ---------- Uploads: sign → direct PUT to storage → confirm ----------
+const UP_MAX_BYTES=2*1024*1024*1024, UP_MAX_COUNT=30;
+let upActive=0; const upQueue=[];
+function renderUploads(){ const el=document.getElementById('uplist'); if(el) el.innerHTML=uploadsListHTML(); }
+function paintProgress(u){
+  const i=(brief._uploads||[]).indexOf(u); if(i<0) return;
+  const bar=document.querySelector(`[data-upbar="${i}"]`);
+  if(bar){ bar.style.width=(u.pct||0)+'%';
+    const row=document.querySelector(`[data-uprow="${i}"] .upstate`);
+    if(row) row.textContent=(u.pct||0)+'%';
+  } else renderUploads();
+}
+function addFiles(files){
+  if(!window.__dispatchMode){ toast('Uploads switch on with your live brief link'); return; }
+  if(!files.length) return;
+  brief._uploads=brief._uploads||[];
+  const before=brief._uploads.length;
+  for(const f of files){
+    if(f.size>UP_MAX_BYTES){ toast(`${f.name} is over 2 GB, send us a link instead`); continue; }
+    if(brief._uploads.length+(brief._received||[]).length>=UP_MAX_COUNT){ toast('That is plenty! Reply to your invite email for the rest.'); break; }
+    const u={name:f.name,size:f.size,state:'queued',pct:0,file:f};
+    brief._uploads.push(u); upQueue.push(u);
+  }
+  if(brief._uploads.length>before){ renderUploads(); pumpUploads(); }
+}
+function pumpUploads(){
+  while(upActive<2 && upQueue.length){ const u=upQueue.shift(); upActive++; uploadOne(u).finally(()=>{ upActive--; pumpUploads(); }); }
+}
+async function uploadOne(u){
+  try{
+    u.state='signing'; renderUploads();
+    const r=await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}/assets`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${DTOKEN}`,'content-type':'application/json'},
+      body:JSON.stringify({name:u.file.name,content_type:u.file.type||'application/octet-stream',size_bytes:u.file.size})});
+    const body=await r.json().catch(()=>({}));
+    if(!r.ok){ u.state='failed'; u.err=body.friendly||"Couldn't start this upload."; renderUploads(); return; }
+    u.assetId=body.asset_id; u.state='uploading'; renderUploads();
+    await new Promise((resolve,reject)=>{
+      const x=new XMLHttpRequest();
+      x.open('PUT',body.upload_url);
+      x.setRequestHeader('Content-Type',body.content_type||u.file.type||'application/octet-stream');
+      x.upload.onprogress=e=>{ if(e.lengthComputable){ u.pct=Math.round(e.loaded/e.total*100); paintProgress(u); } };
+      x.onload=()=>{ if(x.status>=200&&x.status<300){resolve();}else{reject(new Error('upload failed ('+x.status+')'));} };
+      x.onerror=()=>reject(new Error('network hiccup'));
+      x.send(u.file);
+    });
+    const c=await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}/assets/${encodeURIComponent(u.assetId)}/complete`,{
+      method:'POST', headers:{Authorization:`Bearer ${DTOKEN}`}});
+    if(!c.ok) throw new Error('confirm failed');
+    u.state='done'; u.pct=100; renderUploads(); toast('Received: '+u.name);
+  }catch(err){
+    u.state='failed'; u.err="Didn't go through. Check your connection and try again."; renderUploads();
+  }
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-dzopen]')){ const inp=document.getElementById('dzfile'); if(inp) inp.click(); return; }
+  const rt=e.target.closest('[data-upretry]'); if(rt){ const u=(brief._uploads||[])[rt.dataset.upretry]; if(u&&u.file){ u.state='queued'; u.err=''; upQueue.push(u); renderUploads(); pumpUploads(); } }
+});
+document.addEventListener('change',e=>{ if(e.target&&e.target.id==='dzfile'){ addFiles([...e.target.files]); e.target.value=''; } });
+document.addEventListener('dragover',e=>{ const dz=e.target.closest&&e.target.closest('.dropzone'); if(dz){ e.preventDefault(); dz.classList.add('over'); } });
+document.addEventListener('dragleave',e=>{ const dz=e.target.closest&&e.target.closest('.dropzone'); if(dz) dz.classList.remove('over'); });
+document.addEventListener('drop',e=>{ const dz=e.target.closest&&e.target.closest('.dropzone'); if(dz){ e.preventDefault(); dz.classList.remove('over'); addFiles([...((e.dataTransfer&&e.dataTransfer.files)||[])]); } });
+window.addEventListener('beforeunload',e=>{ if(upActive>0||upQueue.length){ e.preventDefault(); e.returnValue=''; } });
 function examHTML(){
   // render() already prints the step eyebrow + title; adding them here too
   // put "Knowledge check" on the page twice (owner bug report 2026-07-14).
@@ -984,6 +1093,7 @@ async function dispatchLoad(){
     const body = await r.json();
     if(body.enabled===false){ dispatchFail("Your brief isn't quite ready yet. We'll email you a fresh link as soon as it is."); return; }
     hydrateFromDispatch(body.brief);
+    brief._received = Array.isArray(body.uploaded_assets) ? body.uploaded_assets : [];
   }catch(err){
     dispatchFail("We couldn't load your brief right now. Please try again in a minute.");
   }
@@ -1056,6 +1166,7 @@ async function boot(){
   await dispatchLoad();
   if(!document.getElementById('main')) return;
   const restored = restoreState();
+  brief._restored = restored;
   render();
   if(restored) toast('Welcome back, we kept your progress.');
   document.addEventListener('input', ()=>persist());
