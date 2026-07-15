@@ -239,7 +239,7 @@
   #main.stepin>*:nth-child(n+8){animation-delay:.31s}
   .btn:active{transform:scale(.97)} .segbtn:active{transform:scale(.96)} .step:active{transform:scale(.99)}
   .why.open .whytip{opacity:1;transform:translateY(0);pointer-events:auto}
-  @media(prefers-reduced-motion:reduce){ #main.stepin>*{animation:none} .burger span,nav.rail,#scrim,#gate,.field,.prod{transition:none} }
+  @media(prefers-reduced-motion:reduce){ #main.stepin>*{animation:none} .burger span,nav.rail,#scrim,#gate,.field,.prod{transition:none} .justdone{animation:none} .chip:active{transform:none} }
 
   /* ---------- tablet / mobile ---------- */
   @media(max-width:920px){
@@ -308,6 +308,32 @@
 .chip{font-size:12px;padding:4px 10px;border-radius:99px;border:1px dashed var(--gold,#c9a15c);background:transparent;color:inherit;cursor:pointer;transition:background .15s}
 .chip:hover{background:rgba(201,161,92,.12)}
 .chip.add{border-style:solid}
+
+  /* ---- UX pass 2026-07-14: empty states, chips, focus, motion ---- */
+  .field{position:relative}
+  .field.needs{background:var(--flare-wash);border:1.5px dashed var(--flare)}
+  .field.needs::after{content:"You add this";position:absolute;top:-9px;left:16px;background:var(--flare);color:var(--ink);font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 9px;border-radius:99px}
+  .field.needs input,.field.needs textarea{border-style:dashed;background:#fff}
+  .sp-needs{background:var(--flare);color:var(--ink);border:none}
+  .sp-needs .d{background:var(--ink)}
+  .chipslbl{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:10px 0 4px}
+  .chip{min-height:34px;padding:7px 13px;font-size:12.5px;display:inline-flex;align-items:center;border:1px dashed var(--flare);color:var(--sub);background:transparent;border-radius:99px;cursor:pointer;transition:background .15s,border-color .15s}
+  .chip::before{content:"＋ ";color:var(--flare-deep)}
+  .chip.add{border-style:solid;background:var(--flare-wash);color:var(--flare-deep)}
+  .chip.add::before{content:"✦ "}
+  .chip:hover{border-color:var(--flare-deep);background:rgba(241,187,100,.16)}
+  .chip:active{transform:scale(.95)}
+  :focus-visible{outline:2px solid var(--flare);outline-offset:2px;border-radius:4px}
+  @keyframes confirmRing{from{box-shadow:0 0 0 0 rgba(241,187,100,.55)}to{box-shadow:0 0 0 16px rgba(241,187,100,0)}}
+  .justdone{animation:confirmRing .55s ease-out}
+  .field.slim{padding:13px 16px;box-shadow:none;background:var(--wash)}
+  .ng-t{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--flare-deep);font-weight:700;margin:26px 0 10px}
+  button.step{width:100%;text-align:left;background:none;border:none;font:inherit;cursor:pointer}
+  .donewrap{text-align:center;padding:48px 0}
+  .donewrap .bigmark{width:64px;height:64px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--flare),0 0 40px 4px rgba(241,187,100,.5);margin:0 auto 26px}
+  .rm-b{display:flex;overflow:hidden}
+  .rm-b i{display:block}
+  .rm-b .needseg{background:repeating-linear-gradient(45deg,var(--flare-wash) 0 4px,var(--flare) 4px 6px)}
 </style>
 </head>
 <body>
@@ -317,7 +343,7 @@
   <div class="gsub">E-Learning Module · Private Preview</div>
   <div class="grow"><input id="gatecode" type="password" placeholder="Passcode" autocomplete="off" autofocus><button id="gatego">Enter</button></div>
   <div class="gerr" id="gateerr"></div>
-  <div class="ghint">Small Circle internal · shared link</div>
+  <div class="ghint">Your passcode is in your invite from Small Circle.</div>
 </div>
 <header>
   <div class="hleft">
@@ -332,7 +358,7 @@
   </div>
   <div class="topright">
     <div class="saved"><span class="dot"></span> Saved just now</div>
-    <div class="pct"><div class="bar"><i id="topbar"></i></div><b id="toppct">0%</b> <span class="pctlbl">complete</span></div>
+    <div class="pct"><div class="bar"><i id="topbar"></i></div><b id="toppct">0%</b> <span class="pctlbl">reviewed</span></div>
   </div>
   <div id="mprog"><i id="mprogi"></i></div>
 </header>
@@ -409,7 +435,7 @@ const brief = {
       marks:["Additive-Free","100% Blue Agave","Estate Grown"],
       awards:F("Awards & accolades","Optional. Title, score, and an image if you have one. SGWS lists these on the selling screen.","We'll add any you send","text","(none on file yet — add if available)","needs") },
 
-    { id:"exam", nav:"Knowledge check", sub:"A quick preview to approve", kind:"exam" },
+    { id:"exam", nav:"Knowledge check", sub:"Approve our draft quiz", kind:"exam" },
   ]
 };
 
@@ -420,14 +446,15 @@ const stepEl = {};
 
 // completeness: count confirmable items across all steps
 function tally(){
-  let total=0, done=0;
+  let total=0, done=0, needsYou=0;
+  const one=(f)=>{ total++; if(f.state==='confirmed'||f._skipped)done++; else if(f.state==='needs'||!(f.value||f.desc||f.name||f.f||'').trim())needsYou++; };
   brief.steps.forEach(s=>{
-    if(s.kind==='fields'){ s.fields.forEach(f=>{ total++; if(f.state==='confirmed')done++; }); }
-    if(s.kind==='story'){ [s.intro,s.founder].forEach(f=>{total++; if(f.state==='confirmed')done++;}); s.timeline.forEach(t=>{total++; if(t.state==='confirmed')done++;}); }
+    if(s.kind==='fields'){ s.fields.forEach(one); }
+    if(s.kind==='story'){ [s.intro,s.founder].forEach(one); s.timeline.forEach(t=>{total++; if(t.state==='confirmed')done++;}); }
     if(s.kind==='lineup'){ s.products.forEach(p=>{total++; if(p.state==='confirmed')done++;}); }
-    if(s.kind==='selling'){ s.fb.forEach(x=>{total++; if(x.state==='confirmed')done++;}); total++; if(s.awards.state==='confirmed')done++; }
+    if(s.kind==='selling'){ s.fb.forEach(x=>{total++; if(x.state==='confirmed')done++;}); one(s.awards); }
   });
-  return {total,done,pct: total? Math.round(done/total*100):0};
+  return {total,done,needsYou,pct: total? Math.round(done/total*100):0};
 }
 // per-step status for rail
 function stepStatus(s){
@@ -447,23 +474,31 @@ const svgSource='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" str
 
 // ---------- Render ----------
 function pill(state){
-  const map={review:['sp-review','Needs your review'],confirmed:['sp-confirmed','Confirmed'],needs:['sp-needs','Needs you']};
+  const map={review:['sp-review','Needs your review'],confirmed:['sp-confirmed','Confirmed'],needs:['sp-needs','Over to you']};
   const [cls,txt]=map[state]; return `<span class="statepill ${cls}"><span class="d"></span>${txt}</span>`;
 }
 function fieldCard(f, idx, ctx){
+  const empty = !(f.value||'').trim() && f.type!=='asset';
+  const ph = empty ? `Our research didn't turn this up, so we left it blank rather than guess. You're the source here.` : '';
   const control = f.type==='textarea'
-      ? `<textarea rows="3" data-edit="${ctx}:${idx}">${f.value}</textarea>`
+      ? `<textarea rows="3" data-edit="${ctx}:${idx}" placeholder="${ph}">${f.value}</textarea>`
       : f.type==='asset'
       ? assetControl(f, ctx, idx)
-      : `<input type="text" data-edit="${ctx}:${idx}" value="${f.value.replace(/"/g,'&quot;')}">`;
+      : `<input type="text" data-edit="${ctx}:${idx}" placeholder="${ph}" value="${f.value.replace(/"/g,'&quot;')}">`;
   const actions = f.state==='confirmed'
       ? `<button class="btn sm" data-unconfirm="${ctx}:${idx}">Edit</button>`
-      : `<button class="btn ok sm" data-confirm="${ctx}:${idx}">✓ Looks right</button><button class="btn sm ghost" data-focus="${ctx}:${idx}">Rewrite</button>`;
-  const chips = (f._sugg && f._sugg.length)
-    ? `<div class="chips">${f._sugg.map((c,ci)=>`<button class="chip ${c.kind}" data-chip="${ctx}:${idx}:${ci}" title="${c.kind==='add'?'From our research':'Idea starter'}">${c.label}</button>`).join('')}</div>`
+      : empty
+      ? (f._skipped
+          ? `<button class="btn sm ghost" data-unskip="${ctx}:${idx}">We'll follow up. Undo?</button>`
+          : `<button class="btn ok sm" data-focus="${ctx}:${idx}">＋ Add this</button><button class="btn sm ghost" data-skip="${ctx}:${idx}">Skip, we'll follow up</button>`)
+      : `<button class="btn ok sm" data-confirm="${ctx}:${idx}">✓ Looks right</button><button class="btn sm ghost" data-focus="${ctx}:${idx}">Make changes</button>`;
+  const hasAdd = f._sugg && f._sugg.some(c=>c.kind==='add');
+  const chips = (f._sugg && f._sugg.length && f.state!=='confirmed')
+    ? `<span class="chipslbl">${empty?'Start from one of these:':(hasAdd?'From our research, tap to add:':'Tap to add:')}</span><div class="chips">${f._sugg.map((c,ci)=>`<button class="chip ${c.kind}" data-chip="${ctx}:${idx}:${ci}" title="${c.kind==='add'?'From our research, verified':'Idea starter'}">${c.label.replace(/^\+\s*/,'')}</button>`).join('')}</div>`
     : '';
-  return `<div class="field ${f.state==='confirmed'?'confirmed':(f.state==='needs'?'needs':'')}">
-    <div class="fhead"><div class="flabel">${f.label}<span class="why">i<span class="whytip">${f.why}</span></span></div>${pill(f.state)}</div>
+  const stateCls = f.state==='confirmed'?'confirmed':(empty||f.state==='needs'?'needs':'');
+  return `<div class="field ${stateCls} ${f._flash?'justdone':''}">
+    <div class="fhead"><div class="flabel">${f.label}<button type="button" class="why" aria-label="Why we ask this">i<span class="whytip">${f.why}</span></button></div>${f._skipped?'<span class="statepill sp-review"><span class="d"></span>We\'ll follow up</span>':pill(empty?'needs':f.state)}</div>
     <div class="source">${svgSource} ${f.source}</div>
     ${control}
     ${chips}
@@ -497,52 +532,110 @@ function render(){
       <div class="sd">${badge}</div>
       <div><div class="st">${s.nav}</div><div class="ss">${s.sub}</div></div></div>`;
   });
-  rh+=`<div class="railmeter"><div class="rm-t"><span>Brief completeness</span><b>${t.pct}%</b></div><div class="rm-b"><i style="width:${t.pct}%"></i></div><div class="rm-n">${t.done} of ${t.total} confirmed</div></div>`;
+  const togo=t.total-t.done;
+  rh+=`<div class="railmeter"><div class="rm-t"><span>Your review</span><b>${t.done}/${t.total}</b></div><div class="rm-b"><i style="width:${t.pct}%"></i><i class="needseg" style="width:${Math.round((t.needsYou/(t.total||1))*100)}%"></i></div><div class="rm-n">${togo===0?'All set, ready to submit':`${togo} quick look${togo===1?'':'s'} to go${t.needsYou?` · ${t.needsYou} need you`:''}`}</div></div>`;
   document.getElementById('rail').innerHTML=rh;
   const bt=document.getElementById('brandtag'); if(bt) bt.textContent=brief.brand.toUpperCase();
   document.getElementById('topbar').style.width=t.pct+'%';
   document.getElementById('mprogi').style.width=t.pct+'%';
-  document.getElementById('toppct').textContent=t.pct+'%';
+  const tp=document.getElementById('toppct'); if(tp){tp.textContent=`${t.done} of ${t.total}`;}
 
   // main
   const s=brief.steps[cur];
   let m='';
-  if(s.kind==='welcome') m=welcomeHTML();
+  if(brief._submitted){ m=submittedHTML(); }
+  else if(brief._confirmSubmit && cur===brief.steps.length-1){ m=submitSummaryHTML(); }
+  else if(s.kind==='welcome') m=welcomeHTML();
   else{
     m=`<div class="eyebrow">Step ${cur} of ${brief.steps.length-1}</div><h1>${s.nav}</h1>`;
     if(s.hint) m+=`<div class="sechint"><span class="ic">✎</span><div>${s.hint}</div></div>`;
+    const reviewables = s.kind==='fields' ? (s.fields||[]).filter(f=>(f.value||'').trim()&&f.state==='review')
+      : s.kind==='lineup' ? s.products.filter(p=>p.state==='review')
+      : s.kind==='selling' ? s.fb.filter(x=>x.state==='review')
+      : s.kind==='story' ? [s.intro,s.founder].filter(f=>(f.value||'').trim()&&f.state==='review').concat(s.timeline.filter(t=>t.state==='review'))
+      : [];
+    if(reviewables.length>=3) m+=`<div class="frow" style="margin:0 0 16px"><button class="btn ok sm" data-confirmstep>✓ Everything in this section looks right</button></div>`;
     if(s.kind==='fields') s.fields.forEach((f,i)=> m+=fieldCard(f,i,'basics'));
     else if(s.kind==='story') m+=storyHTML(s);
     else if(s.kind==='lineup') m+=lineupHTML(s);
     else if(s.kind==='selling') m+=sellingHTML(s);
-    else if(s.kind==='stub') m+=`<div class="internalbox"><div class="lbl">Pre-filled · in this build we stubbed the detail</div><p style="margin-top:10px;color:var(--sub);font-size:14px">${s.stubnote}</p></div>`;
+    else if(s.kind==='stub') m+=`<div class="internalbox"><div class="lbl">We'll build this with you</div><p style="margin-top:10px;color:var(--sub);font-size:14px">${s.stubnote}</p><div style="margin-top:14px"><textarea rows="3" data-stubnote placeholder="Anything you can share now helps: process steps, equipment, timings, what makes it yours...">${brief._stubNote||''}</textarea></div></div>`;
     else if(s.kind==='exam') m+=examHTML();
   }
   const mainEl=document.getElementById('main');
   mainEl.innerHTML=m;
+  // one-shot confirm animations
+  brief.steps.forEach(st=>{ ['fields'].includes(st.kind)&&st.fields&&st.fields.forEach(f=>delete f._flash);
+    if(st.kind==='story'){delete st.intro._flash;delete st.founder._flash;st.timeline.forEach(t=>delete t._flash);}
+    if(st.kind==='lineup')st.products.forEach(x=>delete x._flash);
+    if(st.kind==='selling'){st.fb.forEach(x=>delete x._flash);delete st.awards._flash;} });
   if(cur!==lastStep){ mainEl.classList.remove('stepin'); void mainEl.offsetWidth; mainEl.classList.add('stepin'); lastStep=cur; }
 
-  document.getElementById('backbtn').style.visibility= cur===0?'hidden':'visible';
-  const last = cur===brief.steps.length-1;
-  document.getElementById('nextbtn').textContent = last?'Submit your brief':'Continue →';
-  document.getElementById('foothint').textContent = last?'Submitting sends your brief back to us.':'Saves automatically. Leave and return anytime.';
+  const nb=document.getElementById('nextbtn');
+  if(brief._submitted){ document.getElementById('backbtn').style.visibility='hidden'; nb.style.display='none'; }
+  else{
+    nb.style.display='';
+    document.getElementById('backbtn').style.visibility= cur===0?'hidden':'visible';
+    const last = cur===brief.steps.length-1;
+    nb.textContent = last?(brief._confirmSubmit?'Send it back':'Submit your brief'):'Continue →';
+    document.getElementById('foothint').textContent = last?'Submitting sends your brief back to us.':'Saves automatically. Leave and return anytime.';
+  }
   window.scrollTo(0,0);
 }
 
+function submitSummaryHTML(){
+  const rows=brief.steps.map((st,i)=>{
+    let open=0;
+    const chk=(f)=>{ if(!(f.state==='confirmed'||f._skipped))open++; };
+    if(st.kind==='fields')st.fields.forEach(chk);
+    if(st.kind==='story'){chk(st.intro);chk(st.founder);st.timeline.forEach(t=>{if(t.state!=='confirmed')open++;});}
+    if(st.kind==='lineup')st.products.forEach(p=>{if(p.state!=='confirmed')open++;});
+    if(st.kind==='selling'){st.fb.forEach(x=>{if(x.state!=='confirmed')open++;});chk(st.awards);}
+    return open>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><span>${st.nav} · <b>${open}</b> still open</span><button class="btn sm" data-go="${i}">Review</button></div>`:'';
+  }).join('');
+  return `<div class="eyebrow">Almost there</div><h1>Before you send it back</h1>
+    <p class="lead">A few items are still open. Anything you leave, we'll follow up on together, nothing gets lost.</p>
+    <div style="margin:18px 0">${rows}</div>
+    <div class="frow" style="gap:10px"><button class="btn pri" data-submitanyway>Send it back as is</button><button class="btn" data-resume>Keep reviewing</button></div>`;
+}
+function submittedHTML(){
+  const t=tally();
+  return `<div class="donewrap"><div class="bigmark"></div>
+    <h1>Got it. We'll take it from here.</h1>
+    <p class="lead" style="margin:12px auto 24px;max-width:52ch">${t.done} of ${t.total} confirmed. ${t.total-t.done>0?`We'll follow up on the ${t.total-t.done} open item${t.total-t.done===1?'':'s'}.`:'Everything confirmed, beautifully done.'}</p>
+    <div style="text-align:left;max-width:420px;margin:0 auto;font-size:14px;color:var(--sub)">
+      <div style="padding:8px 0;border-bottom:1px solid var(--line)"><b style="color:var(--ink)">Today</b> · We fold your notes into the course draft</div>
+      <div style="padding:8px 0;border-bottom:1px solid var(--line)"><b style="color:var(--ink)">Next</b> · We design and build your preview</div>
+      <div style="padding:8px 0"><b style="color:var(--ink)">Then</b> · You get a preview link to click through</div>
+    </div>
+    <p style="margin-top:22px;font-size:13px;color:var(--faint)">Need to change something after submitting? Reply to your invite email.</p></div>`;
+}
 function welcomeHTML(){
   const covers=brief.steps.filter(s=>['fields','story','lineup','selling','stub'].includes(s.kind));
   const items=covers.map((s,i)=>`<div class="wc"><span class="wn">${String(i+1).padStart(2,'0')}</span><div><b>${s.nav}</b><span>${s.sub}</span></div></div>`).join('');
+  const t=tally();
+  const drafted=t.total-t.needsYou;
+  const returning=t.done>0;
+  const stats=`<div style="display:flex;gap:18px;flex-wrap:wrap;margin:18px 0 6px;font-size:14px">
+    <span><b>${drafted}</b> drafted for you</span>
+    <span><b>${t.needsYou}</b> only you can add</span>
+    <span><b>~15 min</b> all in</span></div>
+   <div style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 2px;align-items:center;font-size:12.5px;color:var(--sub)">
+    ${pill('review')} we drafted it, give it a look &nbsp; ${pill('confirmed')} done &nbsp; ${pill('needs')} yours to add</div>`;
   return `<div class="welcome">
     <div class="eyebrow">${brief.brand} · E-Learning Module</div>
-    <h1>Let's shape your course.</h1>
-    <p class="lead">Everything here is a starting point. Go section by section: keep what's right, adjust what isn't, and add the few pieces only you have. About fifteen minutes, and it saves as you go.</p>
+    <h1>${returning?'Welcome back.':"Let's shape your course."}</h1>
+    <p class="lead">${returning
+      ? `You've handled ${t.done} of ${t.total}. Pick up where you left off, we kept everything.`
+      : `We've already done the first pass: Small Circle drafted this from your calls, your materials, and our research, and every field shows where it came from. Your part is quick: confirm what's right, fix what isn't, and add the few pieces only you have.`}</p>
+    ${stats}
     <div class="wcover">${items}</div>
-    <p class="wnote">Not sure about something? Leave it and we'll follow up. Nothing here is final.</p>
+    <p class="wnote">Not sure about something? Skip it and we'll follow up together. Questions at any point: reply to your invite email and a real person jumps in.</p>
   </div>`;
 }
 function storyHTML(s){
   let h=fieldCard(s.intro,'intro','story')+fieldCard(s.founder,'founder','story');
-  h+=`<h1 style="font-size:19px;margin:30px 0 2px">Brand timeline</h1><p class="lead" style="font-size:14px">Becomes a scroll-through interactive. Drafted from your call, confirm or add.</p><div class="tl">`;
+  h+=`<h1 style="font-size:19px;margin:30px 0 2px">Brand timeline</h1><p class="lead" style="font-size:14px">This becomes an interactive timeline in your course. We drafted it from what you've shared: confirm each event or add your own.</p><div class="tl">`;
   s.timeline.forEach((t,i)=>{
     const last=i===s.timeline.length-1;
     h+=`<div class="tlitem ${t.state==='confirmed'?'confirmed':''}">
@@ -574,6 +667,7 @@ function lineupHTML(s){
         <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button>`}</div>
       </div></div>`;
   });
+  if(!s.products.length) h=`<p class="lead" style="font-size:14px">We didn't want to guess your lineup. Add your products below and we'll handle the styling, the facts, and the selling roles with you.</p>`+h;
   if(window.__dispatchMode) h+=`<div class="addrow"><button class="btn" data-addprod>＋ Add a product</button></div>`;
   return h;
 }
@@ -600,7 +694,7 @@ function examHTML(){
       : `<p style="color:var(--sub);font-size:14px">We'll draft the knowledge check from the sections you confirm here.</p>`;
     return intro + `<div class="internalbox"><div class="lbl">Draft preview</div>${qs}
       <p style="margin-top:14px;color:var(--sub);font-size:13px">Learners pass at 80% and can retake it.</p>
-      <div class="frow"><button class="btn pri" data-examok>Looks good</button></div>
+      <div class="frow">${brief._examOk?`<span class="statepill sp-confirmed"><span class="d"></span>Approved, we'll finalize the questions</span>`:`<button class="btn pri" data-examok>Looks good</button>`}</div>
       <div style="margin-top:14px"><div class="fbf" style="margin-bottom:6px">Anything to change or add? Tell us here.</div>
       <textarea rows="3" data-examcomment placeholder="e.g. Question 2 should mention the cold brew, and please add one about the serving ritual.">${brief._examComment||''}</textarea></div>
     </div>`;
@@ -624,7 +718,20 @@ function getField(ref){ const [ctx,idx]=ref.split(':'); const s=brief.steps[cur]
 
 document.addEventListener('click',e=>{
   const go=e.target.closest('[data-go]'); if(go){ cur=+go.dataset.go; closeMenu(); render(); return; }
-  const c=e.target.closest('[data-confirm]'); if(c){ getField(c.dataset.confirm).state='confirmed'; toast('Confirmed'); render(); return; }
+  const c=e.target.closest('[data-confirm]'); if(c){ const f=getField(c.dataset.confirm); f.state='confirmed'; f._flash=true; toast('Confirmed'); render(); return; }
+  const sk=e.target.closest('[data-skip]'); if(sk){ const f=getField(sk.dataset.skip); f._skipped=true; toast("Noted, we'll follow up on this one"); render(); return; }
+  if(e.target.closest('[data-confirmstep]')){
+    const st=brief.steps[cur]; let n=0;
+    const ok=(f)=>{ if((f.value||f.desc||f.name||f.f||'').trim()&&f.state==='review'){f.state='confirmed';f._flash=true;n++;} };
+    if(st.kind==='fields') st.fields.forEach(ok);
+    if(st.kind==='story'){ ok(st.intro); ok(st.founder); st.timeline.forEach(t=>{if(t.state==='review'){t.state='confirmed';t._flash=true;n++;}}); }
+    if(st.kind==='lineup') st.products.forEach(pr=>{if(pr.state==='review'){pr.state='confirmed';pr._flash=true;n++;}});
+    if(st.kind==='selling'){ st.fb.forEach(x=>{if(x.state==='review'){x.state='confirmed';x._flash=true;n++;}}); ok(st.awards); }
+    toast(`Section confirmed, ${n} item${n===1?'':'s'}`); render(); return;
+  }
+  if(e.target.closest('[data-submitanyway]')){ brief._confirmSubmit=false; if(window.__dispatchMode){dispatchSubmit();}else{brief._submitted=true;render();} return; }
+  if(e.target.closest('[data-resume]')){ brief._confirmSubmit=false; const idx=brief.steps.findIndex((st,i)=>i>0&&stepStatus(st)!=='done'&&stepStatus(st)!=='internal'); cur=idx>0?idx:1; render(); return; }
+  const us=e.target.closest('[data-unskip]'); if(us){ const f=getField(us.dataset.unskip); delete f._skipped; render(); return; }
   const u=e.target.closest('[data-unconfirm]'); if(u){ getField(u.dataset.unconfirm).state='review'; render(); return; }
   const fo=e.target.closest('[data-focus]'); if(fo){ const el=document.querySelector(`[data-edit="${fo.dataset.focus}"]`); if(el){el.focus();} return; }
   const am=e.target.closest('[data-am]'); if(am){ const [ctx,idx,mode]=am.dataset.am.split(':'); const f=getField(ctx+':'+idx); f._m=mode; if(mode==='up'||mode==='link'){f.state='needs';} render(); return; }
@@ -646,7 +753,7 @@ document.addEventListener('click',e=>{
     }
   }
   const fbok=e.target.closest('[data-fbok]'); if(fbok){ brief.steps[cur].fb[fbok.dataset.fbok].state='confirmed'; toast('Confirmed'); render(); return; }
-  if(e.target.closest('[data-examok]')){ brief._examOk = true; toast('Noted, thank you'); return; }
+  if(e.target.closest('[data-examok]')){ brief._examOk = true; toast('Approved, thank you'); render(); return; }
   if(e.target.closest('[data-addprod]')){ brief.steps[cur].products.push({name:"", role:"DEFINE", state:"review", facts:[], _new:true}); render(); return; }
   if(e.target.closest('[data-addfb]')){ brief.steps[cur].fb.push({f:"", b:"", state:"review", _new:true}); render(); return; }
 });
@@ -656,10 +763,18 @@ document.addEventListener('input',e=>{
   const ff=e.target.closest('[data-fbf]'); if(ff){ brief.steps[cur].fb[ff.dataset.fbf].f=ff.value; return; }
   const fb2=e.target.closest('[data-fbb]'); if(fb2){ brief.steps[cur].fb[fb2.dataset.fbb].b=fb2.value; return; }
   const ec=e.target.closest('[data-examcomment]'); if(ec){ brief._examComment=ec.value; return; }
+  const sn=e.target.closest('[data-stubnote]'); if(sn){ brief._stubNote=sn.value; return; }
 });
 document.addEventListener('change',e=>{ const r=e.target.closest('[data-role]'); if(r){ brief.steps[cur].products[r.dataset.role].role=r.value; } });
 document.getElementById('backbtn').onclick=()=>{ if(cur>0){cur--;render();} };
-document.getElementById('nextbtn').onclick=()=>{ if(cur<brief.steps.length-1){cur++;render();} else if(window.__dispatchMode){ dispatchSubmit(); } else { toast('Brief submitted. Thank you.'); } };
+document.getElementById('nextbtn').onclick=()=>{
+  if(cur<brief.steps.length-1){cur++;render();return;}
+  const t=tally();
+  if(t.total-t.done>0 && !brief._confirmSubmit){
+    brief._confirmSubmit=true; render(); return;
+  }
+  if(window.__dispatchMode){ dispatchSubmit(); } else { brief._submitted=true; render(); }
+};
 
 // ---------- mobile menu ----------
 const burger=document.getElementById('burger'), scrim=document.getElementById('scrim');
@@ -730,7 +845,7 @@ function hydrateFromDispatch(doc){
     hint:"How the brand sells, shown as <b>feature-and-benefit</b> cards. Review and refine the pairings.",
     fb: selling.fb.map(x=>({f:x.f, b:x.b, state:_stFrom[x.state]||"review"})),
     marks: selling.marks, awards:_f(selling.awards,"Awards & accolades") });
-  steps.push({ id:"exam", nav:"Knowledge check", sub:"A quick preview to approve", kind:"exam" });
+  steps.push({ id:"exam", nav:"Knowledge check", sub:"Approve our draft quiz", kind:"exam" });
   brief._exam = exam ? exam.items.map(i=>({stem:i.stem, options:i.options})) : [];
   brief.steps = steps;
 }
@@ -778,7 +893,10 @@ function applyBackToDispatch(){
     }
   });
   if(exam && brief._examOk) exam.items.forEach(i=>{ i.state = "confirmed"; });
-  if(exam && (brief._examComment||"").trim()) exam.client_comment = brief._examComment.trim();
+  const noteBits=[];
+  if((brief._examComment||"").trim()) noteBits.push(brief._examComment.trim());
+  if((brief._stubNote||"").trim()) noteBits.push("Production notes: "+brief._stubNote.trim());
+  if(exam && noteBits.length) exam.client_comment = noteBits.join("\n");
 }
 
 function dispatchFail(msg){
@@ -790,10 +908,10 @@ async function dispatchLoad(){
   try{
     const r = await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}`,
       { headers: { Authorization: `Bearer ${DTOKEN}` } });
-    if(r.status===401){ dispatchFail("This link has expired or isn't valid. Ask your Small Circle producer for a fresh one."); return; }
-    if(r.status===404){ dispatchFail("We couldn't find this brief. Ask your Small Circle producer for a fresh link."); return; }
+    if(r.status===401){ dispatchFail("This link has expired. Reply to the email that brought you here and we'll send a fresh one right away."); return; }
+    if(r.status===404){ dispatchFail("We couldn't find this brief. Reply to your invite email and we'll send a fresh link."); return; }
     const body = await r.json();
-    if(body.enabled===false){ dispatchFail("This experience isn't live yet. Your Small Circle producer will follow up shortly."); return; }
+    if(body.enabled===false){ dispatchFail("Your brief isn't quite ready yet. We'll email you a fresh link as soon as it is."); return; }
     hydrateFromDispatch(body.brief);
   }catch(err){
     dispatchFail("We couldn't load your brief right now. Please try again in a minute.");
@@ -814,14 +932,15 @@ async function dispatchSubmit(){
     const body = await r.json().catch(()=>({}));
     if(r.ok){
       dispatchSubmitted = true;
-      btn.textContent = "Submitted ✓";
-      toast("Brief submitted. Thank you — we'll take it from here.");
+      brief._submitted = true;
+      try{ localStorage.removeItem(saveKey()); }catch(_e){}
       document.getElementById('foothint').textContent = "Submitted. Small Circle has been notified.";
+      render();
       return;
     }
     btn.disabled = false; btn.textContent = "Submit your brief";
-    if(body.error==="invalid_transition") toast("This brief is still in Small Circle review — it isn't open for submission yet.");
-    else if(body.error==="revision_rejected"||body.error==="revision_conflict") toast("This brief was updated elsewhere. Reload the page and try again.");
+    if(body.error==="invalid_transition") toast("This brief isn't open for submission just yet. We'll email you the moment it is.");
+    else if(body.error==="revision_rejected"||body.error==="revision_conflict") toast("This brief changed since you opened it. Refresh the page to pick up the latest, then submit again.");
     else toast("Couldn't submit right now. Please try again in a minute.");
   }catch(err){
     btn.disabled = false; btn.textContent = "Submit your brief";
@@ -829,9 +948,47 @@ async function dispatchSubmit(){
   }
 }
 
+function saveKey(){ return `cb_state_${DBRIEF||'demo'}_${dispatchDoc?dispatchDoc.revision:'0'}`; }
+function snapshotState(){
+  const snap={steps:{},examOk:!!brief._examOk,examComment:brief._examComment||'',stubNote:brief._stubNote||''};
+  brief.steps.forEach((st,i)=>{
+    const rec={};
+    const cap=(k,f)=>{ rec[k]={v:f.value??null,s:f.state,sk:!!f._skipped}; };
+    if(st.kind==='fields'){ rec.fields=st.fields.map(f=>({v:f.value,s:f.state,sk:!!f._skipped})); }
+    if(st.kind==='story'){ cap('intro',st.intro); cap('founder',st.founder); rec.tl=st.timeline.map(t=>({d:t.date,t:t.title,x:t.desc,s:t.state})); }
+    if(st.kind==='lineup'){ rec.prods=st.products.map(p=>({n:p.name,r:p.role,s:p.state,nw:!!p._new})); }
+    if(st.kind==='selling'){ rec.fb=st.fb.map(x=>({f:x.f,b:x.b,s:x.state,nw:!!x._new})); cap('awards',st.awards); }
+    snap.steps[i]=rec;
+  });
+  return snap;
+}
+function persist(){ try{ localStorage.setItem(saveKey(), JSON.stringify(snapshotState())); const sv=document.querySelector('.saved'); if(sv)sv.innerHTML='<span class="dot"></span> Saved · just now'; }catch(_e){} }
+function restoreState(){
+  let raw=null; try{ raw=localStorage.getItem(saveKey()); }catch(_e){}
+  if(!raw) return false;
+  try{
+    const snap=JSON.parse(raw);
+    brief.steps.forEach((st,i)=>{
+      const rec=snap.steps[i]; if(!rec)return;
+      const app=(f,d)=>{ if(!d)return; if(d.v!=null)f.value=d.v; if(d.s)f.state=d.s; if(d.sk)f._skipped=true; };
+      if(st.kind==='fields'&&rec.fields) st.fields.forEach((f,j)=>app(f,rec.fields[j]));
+      if(st.kind==='story'){ app(st.intro,rec.intro); app(st.founder,rec.founder);
+        (rec.tl||[]).forEach((d,j)=>{ if(st.timeline[j]){ st.timeline[j].date=d.d;st.timeline[j].title=d.t;st.timeline[j].desc=d.x;st.timeline[j].state=d.s; } else { st.timeline.push({date:d.d,title:d.t,desc:d.x,state:d.s}); } }); }
+      if(st.kind==='lineup'&&rec.prods) rec.prods.forEach((d,j)=>{ if(st.products[j]){ st.products[j].role=d.r;st.products[j].state=d.s; if(d.nw)st.products[j].name=d.n; } else { st.products.push({name:d.n,role:d.r,state:d.s,facts:[],_new:true}); } });
+      if(st.kind==='selling'){ (rec.fb||[]).forEach((d,j)=>{ if(st.fb[j]){ st.fb[j].state=d.s; if(d.nw){st.fb[j].f=d.f;st.fb[j].b=d.b;} } else { st.fb.push({f:d.f,b:d.b,state:d.s,_new:true}); } }); app(st.awards,rec.awards); }
+    });
+    brief._examOk=snap.examOk; brief._examComment=snap.examComment; brief._stubNote=snap.stubNote;
+    return true;
+  }catch(_e){ return false; }
+}
 async function boot(){
   await dispatchLoad();
-  if(document.getElementById('main')) render();
+  if(!document.getElementById('main')) return;
+  const restored = restoreState();
+  render();
+  if(restored) toast('Welcome back, we kept your progress.');
+  document.addEventListener('input', ()=>persist());
+  document.addEventListener('click', (e)=>{ if(e.target.closest('button')) setTimeout(persist,50); });
 }
 
 boot();
