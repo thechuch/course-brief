@@ -1059,7 +1059,34 @@ function hydrateFromDispatch(doc){
     hint:"Links beat attachments: when you update a file at the same link, your course stays current without a rebuild." });
   steps.push({ id:"exam", nav:"Knowledge check", sub:"Approve our draft quiz", kind:"exam" });
   brief._exam = exam ? exam.items.map(i=>({stem:i.stem, options:i.options})) : [];
+  // Restore exam approval + the three free-text notes from what the
+  // server actually has, so a fresh load (any device, or this same
+  // browser after a reload) shows real saved content instead of
+  // reverting to an un-approved, empty-textarea state (adversarial
+  // review 2026-07-15: these local-only fields never survived a draft
+  // round-trip once localStorage-restore was dropped in dispatch mode).
+  brief._examOk = !!(exam && exam.items.length && exam.items.every(i=>i.state==='confirmed'));
+  const split = splitClientComment(exam && exam.client_comment || '');
+  brief._examComment = split.examComment;
+  brief._stubNote = split.stubNote;
+  brief._assetNote = split.assetNote;
   brief.steps = steps;
+}
+
+// applyBackToDispatch folds _examComment/_stubNote/_assetNote into ONE
+// exam.client_comment string, tagged with the SAME prefixes it writes
+// ("Production notes: ", "Asset links: "); this reverses that fold on
+// load so the three boxes show their own saved text, not a jumble.
+function splitClientComment(raw){
+  const out={examComment:'',stubNote:'',assetNote:''};
+  if(!raw) return out;
+  let bucket='examComment';
+  for(const line of raw.split('\n')){
+    if(line.startsWith('Production notes: ')){ bucket='stubNote'; out.stubNote+=(out.stubNote?'\n':'')+line.slice('Production notes: '.length); continue; }
+    if(line.startsWith('Asset links: ')){ bucket='assetNote'; out.assetNote+=(out.assetNote?'\n':'')+line.slice('Asset links: '.length); continue; }
+    out[bucket]+=(out[bucket]?'\n':'')+line;
+  }
+  return out;
 }
 
 function applyBackToDispatch(){
@@ -1230,21 +1257,41 @@ function scheduleDraftSave(){
   clearTimeout(draftTimer);
   draftTimer=setTimeout(saveDraftNow, 1200);
 }
+const DRAFT_SAVE_TIMEOUT_MS=20000;
 async function saveDraftNow(){
   if(!dispatchDoc || brief._submitted) return;
   if(draftInFlight){ draftDirty=true; return; }
   draftInFlight=true;
   setSavedIndicator('saving');
+  // A silently hung connection (dropped packets, no error) would
+  // otherwise wedge draftInFlight forever, since fetch has no built-in
+  // timeout (adversarial review 2026-07-15): abort and free it up.
+  const controller = ('AbortController' in window) ? new AbortController() : null;
+  const killer = controller ? setTimeout(()=>controller.abort(), DRAFT_SAVE_TIMEOUT_MS) : null;
   try{
     applyBackToDispatch();
     const r=await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}/draft`,{
       method:'POST', headers:{Authorization:`Bearer ${DTOKEN}`,'content-type':'application/json'},
-      body: JSON.stringify(dispatchDoc)});
-    if(r.ok){ setSavedIndicator('saved'); }
+      body: JSON.stringify({...dispatchDoc, composed_at: Date.now()}),
+      ...(controller?{signal:controller.signal}:{})});
+    // A save that resolves AFTER Submit already went through must not
+    // paint a misleading "Saved" over the completion screen.
+    if(brief._submitted){ /* no-op */ }
+    else if(r.ok || r.status===409){
+      // 409 "stale" means our view is behind (a submission, or a fresher
+      // pull, happened elsewhere) — nothing of ours was lost, so this is
+      // NOT an alarming failure to the client; just stop hammering it.
+      setSavedIndicator('saved');
+      if(r.status===409){ clearTimeout(draftTimer); draftTimer=null; }
+    }
     else{ setSavedIndicator('error'); clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 5000); }
   }catch(_e){
-    setSavedIndicator('error');
-    clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 5000);
+    if(!brief._submitted){
+      setSavedIndicator('error');
+      clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 5000);
+    }
+  }finally{
+    if(killer) clearTimeout(killer);
   }
   draftInFlight=false;
   if(draftDirty){ draftDirty=false; clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 400); }
