@@ -534,7 +534,7 @@ function fieldCard(f, idx, ctx){
     : '';
   const stateCls = f.state==='confirmed'?'confirmed':(empty||f.state==='needs'?'needs':'');
   return `<div class="field ${stateCls} ${f._flash?'justdone':''}">
-    <div class="fhead"><div class="flabel">${f.label}<button type="button" class="why" aria-label="Why we ask this">i<span class="whytip">${f.why}</span></button></div>${f._skipped?'<span class="statepill sp-review"><span class="d"></span>We\'ll follow up</span>':pill(empty?'needs':f.state)}</div>
+    <div class="fhead"><div class="flabel">${f.label}${f.why?`<button type="button" class="why" aria-label="Why we ask this">i<span class="whytip">${f.why}</span></button>`:''}</div>${f._skipped?'<span class="statepill sp-review"><span class="d"></span>We\'ll follow up</span>':pill(empty?'needs':f.state)}</div>
     <div class="source">${svgSource} ${f.source}</div>
     ${control}
     ${chips}
@@ -672,12 +672,12 @@ function welcomeHTML(){
   // has no idea if THIS is someone's first visit, only whether progress
   // exists anywhere (owner feedback 2026-07-15, x2).
   const hasProgress=!!brief._restored;
+  // Owner 2026-07-16: the pill legend read as clutter ("we can kill those
+  // little chips") — the numbers carry the message on their own.
   const stats=`<div style="display:flex;gap:18px;flex-wrap:wrap;margin:18px 0 6px;font-size:14px">
     <span><b>${drafted}</b> drafted for you</span>
     <span><b>${t.needsYou}</b> only you can add</span>
-    <span><b>~15 min</b> all in</span></div>
-   <div style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 2px;align-items:center;font-size:12.5px;color:var(--sub)">
-    ${pill('review')} we drafted it, give it a look &nbsp; ${pill('confirmed')} done &nbsp; ${pill('needs')} yours to add</div>`;
+    <span><b>~15 min</b> all in</span></div>`;
   return `<div class="welcome">
     <h1>Welcome.</h1>
     <p class="lead">${hasProgress
@@ -685,7 +685,7 @@ function welcomeHTML(){
       : `We've already done the first pass: Small Circle drafted this from your calls, your materials, and our research, and every field shows where it came from. Your part is quick: confirm what's right, fix what isn't, and add the few pieces only you have.`}</p>
     ${stats}
     <div class="wcover">${items}</div>
-    <p class="wnote">Not sure about something? Skip it and we'll follow up together. Questions at any point: reply to your invite email and a real person jumps in.</p>
+    <p class="wnote">Questions at any point: reply to your invite email and a real person jumps in.</p>
   </div>`;
 }
 function storyHTML(s){
@@ -890,7 +890,7 @@ window.addEventListener('beforeunload',e=>{ if(upActive>0||upQueue.length){ e.pr
 function examHTML(){
   // render() already prints the step eyebrow + title; adding them here too
   // put "Knowledge check" on the page twice (owner bug report 2026-07-14).
-  const intro = `<div class="sechint"><span class="ic">✎</span><div>A short check closes the course: <b>six questions max</b>, learners pass at <b>80%</b> and can retake it. Here's a first draft based on what you confirmed, have a look and flag anything you'd change.</div></div>`;
+  const intro = `<div class="sechint"><span class="ic">✎</span><div>A short check closes the course: <b>ten questions max</b>, learners pass at <b>80%</b> and can retake it. Here's a first draft based on what you confirmed, have a look and flag anything you'd change.</div></div>`;
   if(brief._exam){
     const qs = brief._exam.length ? brief._exam.map((q,i)=>`<div class="exq"><div class="q">${i+1} &nbsp;${q.stem}</div>
         <div class="opts">${q.options.map(o=>`<div class="opt ${o.correct?'correct':''}">${o.text}</div>`).join('')}</div></div>`).join('')
@@ -1038,7 +1038,9 @@ function hydrateFromDispatch(doc){
   if(prod){
     if(prod.intro && (prod.intro.value || (prod.intro.suggestions||[]).length)){ const pf=_f(prod.intro,"Production intro"); pf._id="production.intro"; pf.type="textarea"; prodFields.push(pf); }
     (prod.steps||[]).forEach((st,i)=>{
-      const sf=F(`Step ${i+1}, ${st.title}`, st.why||"", (st.source&&st.source.label)||"From our research", "textarea", st.desc||"", _stFrom[st.state]||"review");
+      // No info tooltip on step cards (owner 2026-07-16) — the intro card
+      // explains why the process matters; per-step methodology copy is noise.
+      const sf=F(`Step ${i+1}, ${st.title}`, "", (st.source&&st.source.label)||"From our research", "textarea", st.desc||"", _stFrom[st.state]||"review");
       sf._id=`production.steps.${st.id}`; sf._title=st.title; prodFields.push(sf);
     });
   }
