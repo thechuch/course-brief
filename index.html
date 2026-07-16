@@ -659,10 +659,14 @@ function welcomeHTML(){
   const items=covers.map((s,i)=>`<div class="wc"><span class="wn">${String(i+1).padStart(2,'0')}</span><div><b>${s.nav}</b><span>${s.sub}</span></div></div>`).join('');
   const t=tally();
   const drafted=t.total-t.needsYou;
-  // "Returning" means we restored THEIR saved session, never that seeded
-  // fields counted as done (the old tally check greeted first-time
-  // visitors with "you've handled 3 of 13", owner feedback 2026-07-15).
-  const returning=!!brief._restored;
+  // "hasProgress" means real saved progress exists (a server draft in
+  // dispatch mode, or a restored localStorage snapshot in the demo) —
+  // never that seeded fields counted as done (the old tally check
+  // greeted first-time visitors with "you've handled 3 of 13"), and
+  // never phrased as "back": the same link opened on a different device
+  // has no idea if THIS is someone's first visit, only whether progress
+  // exists anywhere (owner feedback 2026-07-15, x2).
+  const hasProgress=!!brief._restored;
   const stats=`<div style="display:flex;gap:18px;flex-wrap:wrap;margin:18px 0 6px;font-size:14px">
     <span><b>${drafted}</b> drafted for you</span>
     <span><b>${t.needsYou}</b> only you can add</span>
@@ -670,9 +674,9 @@ function welcomeHTML(){
    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 2px;align-items:center;font-size:12.5px;color:var(--sub)">
     ${pill('review')} we drafted it, give it a look &nbsp; ${pill('confirmed')} done &nbsp; ${pill('needs')} yours to add</div>`;
   return `<div class="welcome">
-    <h1>${returning?'Welcome back.':"Let's shape your course."}</h1>
-    <p class="lead">${returning
-      ? `Everything you added last time is saved. Jump back in anywhere.`
+    <h1>Welcome.</h1>
+    <p class="lead">${hasProgress
+      ? `Your progress is saved. Pick up anywhere, we kept everything.`
       : `We've already done the first pass: Small Circle drafted this from your calls, your materials, and our research, and every field shows where it came from. Your part is quick: confirm what's right, fix what isn't, and add the few pieces only you have.`}</p>
     ${stats}
     <div class="wcover">${items}</div>
@@ -1132,6 +1136,10 @@ async function dispatchLoad(){
     if(body.enabled===false){ dispatchFail("Your brief isn't quite ready yet. We'll email you a fresh link as soon as it is."); return; }
     hydrateFromDispatch(body.brief);
     brief._received = Array.isArray(body.uploaded_assets) ? body.uploaded_assets : [];
+    // A draft in the response means real saved progress exists SOMEWHERE
+    // (any device, any prior session) — the true, server-verified signal
+    // for "welcome, we kept your progress" (owner feedback 2026-07-15).
+    brief._hasDraft = !!body.draft_saved_at;
   }catch(err){
     dispatchFail("We couldn't load your brief right now. Please try again in a minute.");
   }
@@ -1152,6 +1160,7 @@ async function dispatchSubmit(){
     if(r.ok){
       dispatchSubmitted = true;
       brief._submitted = true;
+      clearTimeout(draftTimer);
       try{ localStorage.removeItem(saveKey()); }catch(_e){}
       document.getElementById('foothint').textContent = "Submitted. Small Circle has been notified.";
       render();
@@ -1200,15 +1209,61 @@ function restoreState(){
     return true;
   }catch(_e){ return false; }
 }
+// ---------- Continuous autosave (owner request 2026-07-15) ----------
+// "Saves automatically" must actually mean saved to Dispatch: the client
+// typed something on one browser, opened the same link on another (an
+// incognito window, a different device), and none of it was there —
+// because it never left the first browser's localStorage. A debounced
+// POST to /draft after every edit fixes that: any device pulling this
+// link now sees the same in-progress state (server GET pull already
+// prefers the draft over the canonical brief, see route.ts).
+let draftTimer=null, draftInFlight=false, draftDirty=false;
+function setSavedIndicator(state){
+  const sv=document.querySelector('.saved'); if(!sv) return;
+  if(state==='saving') sv.innerHTML='<span class="dot"></span> Saving…';
+  else if(state==='saved') sv.innerHTML='<span class="dot"></span> Saved';
+  else if(state==='error') sv.innerHTML='<span class="dot"></span> Not saved, retrying…';
+}
+function scheduleDraftSave(){
+  persist(); // instant same-tab local cache; harmless, never read back in dispatch mode
+  if(!window.__dispatchMode) return;
+  clearTimeout(draftTimer);
+  draftTimer=setTimeout(saveDraftNow, 1200);
+}
+async function saveDraftNow(){
+  if(!dispatchDoc || brief._submitted) return;
+  if(draftInFlight){ draftDirty=true; return; }
+  draftInFlight=true;
+  setSavedIndicator('saving');
+  try{
+    applyBackToDispatch();
+    const r=await fetch(`${DISPATCH_API}/api/elearning/briefs/${encodeURIComponent(DBRIEF)}/draft`,{
+      method:'POST', headers:{Authorization:`Bearer ${DTOKEN}`,'content-type':'application/json'},
+      body: JSON.stringify(dispatchDoc)});
+    if(r.ok){ setSavedIndicator('saved'); }
+    else{ setSavedIndicator('error'); clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 5000); }
+  }catch(_e){
+    setSavedIndicator('error');
+    clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 5000);
+  }
+  draftInFlight=false;
+  if(draftDirty){ draftDirty=false; clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 400); }
+}
+
 async function boot(){
   await dispatchLoad();
   if(!document.getElementById('main')) return;
-  const restored = restoreState();
+  // In dispatch mode the SERVER (draft, or its absence) is the single
+  // source of truth for "does saved progress exist" — localStorage is
+  // per-browser and gave false positives (same machine previewing twice)
+  // and false negatives (a genuinely returning client on another device)
+  // alike. Demo mode has no server, so it still uses localStorage.
+  const restored = window.__dispatchMode ? !!brief._hasDraft : restoreState();
   brief._restored = restored;
   render();
-  if(restored) toast('Welcome back, we kept your progress.');
-  document.addEventListener('input', ()=>persist());
-  document.addEventListener('click', (e)=>{ if(e.target.closest('button')) setTimeout(persist,50); });
+  if(restored) toast('Welcome, we kept your progress.');
+  document.addEventListener('input', ()=>scheduleDraftSave());
+  document.addEventListener('click', (e)=>{ if(e.target.closest('button')) setTimeout(scheduleDraftSave,50); });
 }
 
 boot();
