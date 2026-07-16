@@ -246,6 +246,16 @@
   .wc b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
   .wc span{font-size:12.5px;color:var(--sub)}
   .wnote{margin-top:22px;color:var(--faint);font-size:13px}
+  .ihowwrap{display:flex;flex-direction:column;gap:14px;margin-top:28px}
+  .ihow{display:flex;gap:18px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;box-shadow:var(--sh)}
+  .ihow .ihn{font-weight:700;color:var(--flare-deep);font-size:14px;letter-spacing:.05em;flex:none;margin-top:2px}
+  .ihow b{display:block;font-size:15.5px;font-weight:650;letter-spacing:-.012em;margin-bottom:4px}
+  .ihow p{margin:0;font-size:14px;color:var(--sub);line-height:1.6}
+  .ireassure{display:flex;gap:10px 22px;flex-wrap:wrap;margin-top:20px;font-size:13px;color:var(--faint)}
+  .ireassure span{display:flex;align-items:center;gap:7px}
+  .ireassure span::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--flare);flex:none}
+  .btn.cta{background:var(--ink);color:#F6F4F0;border:none;font-size:15px;font-weight:700;padding:14px 28px;border-radius:12px;letter-spacing:-.01em}
+  .btn.cta:hover{transform:translateY(-1px);box-shadow:0 10px 26px -10px rgba(0,0,0,.45)}
   @media(max-width:640px){.wcover{grid-template-columns:1fr}}
 
   /* header left + burger (desktop: burger hidden) */
@@ -422,7 +432,8 @@ function F(label, why, source, type, value, state){ return {label, why, source, 
 const brief = {
   brand:"Totality",
   steps:[
-    { id:"welcome", nav:"How this works", sub:"Start here", kind:"welcome" },
+    { id:"intro", nav:"What this is", sub:"Start here", kind:"intro" },
+    { id:"welcome", nav:"How this works", sub:"Your overview", kind:"welcome" },
 
     { id:"basics", nav:"The basics", sub:"Title, description, brand assets", kind:"fields",
       hint:"The essentials for your course. Review each field and adjust anything that is not right.",
@@ -565,7 +576,9 @@ function render(){
   brief.steps.forEach((s,i)=>{
     const st=stepStatus(s);
     const cls=st==='done'?'done':st==='partial'?'partial':st==='internal'?'internal':'';
-    const badge=st==='done'?'✓':st==='internal'?'SC':(i);
+    // Numbering starts at the overview (0) so content steps keep their
+    // familiar numbers; the landing page gets a marker, not a number.
+    const badge=st==='done'?'✓':st==='internal'?'SC':(i===0?'✦':i-1);
     rh+=`<div class="step ${i===cur?'active':''} ${cls}" data-go="${i}">
       <div class="sd">${badge}</div>
       <div><div class="st">${s.nav}</div><div class="ss">${s.sub}</div></div></div>`;
@@ -583,9 +596,10 @@ function render(){
   let m='';
   if(brief._submitted){ m=submittedHTML(); }
   else if(brief._confirmSubmit && cur===brief.steps.length-1){ m=submitSummaryHTML(); }
+  else if(s.kind==='intro') m=introHTML();
   else if(s.kind==='welcome') m=welcomeHTML();
   else{
-    m=`<div class="eyebrow">Step ${cur} of ${brief.steps.length-1}</div><h1>${s.nav}</h1>`;
+    m=`<div class="eyebrow">Step ${cur-1} of ${brief.steps.length-2}</div><h1>${s.nav}</h1>`;
     if(s.hint) m+=`<div class="sechint"><span class="ic">✎</span><div>${s.hint}</div></div>`;
     const reviewables = s.kind==='fields' ? (s.fields||[]).filter(f=>(f.value||'').trim()&&f.state==='review')
       : s.kind==='lineup' ? s.products.filter(p=>p.state==='review')
@@ -658,6 +672,27 @@ function submittedHTML(){
       <div style="padding:8px 0"><b style="color:var(--ink)">Then</b> · You get a preview link to click through</div>
     </div>
     <p style="margin-top:22px;font-size:13px;color:var(--faint)">Need to change something after submitting? Reply to your invite email.</p></div>`;
+}
+// The true landing page (owner request 2026-07-16): the share link used
+// to drop clients straight onto the overview with zero framing. This
+// page says what the thing IS before the overview says what's in it.
+function introHTML(){
+  const course = (window.__dispatchMode && dispatchDoc && dispatchDoc.course) || null;
+  const audience = (course && course.audience) ? course.audience : "the sales teams who sell it";
+  const runtime = (course && course.target_runtime_min) ? `${course.target_runtime_min}-minute` : "short";
+  const hasProgress = !!brief._restored;
+  const how = [
+    ["We drafted it for you", "Everything here was pre-filled from your calls, your materials, and our research. Every field shows exactly where its information came from."],
+    ["You look it over", "Confirm what's right, fix what isn't, and add the few things only you know. Nothing goes into the course until you approve it."],
+    ["We build your course", `Your approved content becomes the designed, interactive course${course && course.working_title ? ` "${course.working_title}"` : ""}, with a short knowledge check at the end.`],
+  ].map((x,i)=>`<div class="ihow"><span class="ihn">${String(i+1).padStart(2,'0')}</span><div><b>${x[0]}</b><p>${x[1]}</p></div></div>`).join('');
+  return `<div class="welcome intro">
+    <h1>We're building ${brief.brand}'s e-learning course.</h1>
+    <p class="lead">Small Circle is turning your brand's story into a ${runtime} interactive training course for ${audience}. Before we design a single screen, the facts have to be right. That's what this link is: your course content, drafted and ready for your review.</p>
+    <div class="ihowwrap">${how}</div>
+    <div class="ireassure"><span>About 15 minutes</span><span>Saves automatically, on any device</span><span>A real person is one reply away</span></div>
+    <div style="margin-top:26px"><button class="btn cta" data-introgo>${hasProgress?'Pick up where you left off →':'Get started →'}</button></div>
+  </div>`;
 }
 function welcomeHTML(){
   const covers=brief.steps.filter(s=>['fields','story','lineup','selling','stub','assets'].includes(s.kind));
@@ -960,6 +995,7 @@ document.addEventListener('click',e=>{
   }
   const fbok=e.target.closest('[data-fbok]'); if(fbok){ brief.steps[cur].fb[fbok.dataset.fbok].state='confirmed'; toast('Confirmed'); render(); return; }
   if(e.target.closest('[data-examok]')){ brief._examOk = true; toast('Approved, thank you'); render(); return; }
+  if(e.target.closest('[data-introgo]')){ if(cur<brief.steps.length-1){cur++;render();} return; }
   if(e.target.closest('[data-addprod]')){ brief.steps[cur].products.push({name:"", role:"DEFINE", state:"review", facts:[], _new:true, _cid:cbNewId('p')}); render(); return; }
   if(e.target.closest('[data-addfb]')){ brief.steps[cur].fb.push({f:"", b:"", state:"review", _new:true, _cid:cbNewId('fb')}); render(); return; }
 });
@@ -1025,7 +1061,10 @@ function hydrateFromDispatch(doc){
   brief.brand = doc.client.display;
   const basics = _sec(doc,"basics"), story = _sec(doc,"story"), lineup = _sec(doc,"lineup"),
         selling = _sec(doc,"selling"), exam = _sec(doc,"exam");
-  const steps = [ { id:"welcome", nav:"How this works", sub:"Start here", kind:"welcome" } ];
+  const steps = [
+    { id:"intro", nav:"What this is", sub:"Start here", kind:"intro" },
+    { id:"welcome", nav:"How this works", sub:"Your overview", kind:"welcome" },
+  ];
   if(basics) steps.push({ id:"basics", nav:"The basics", sub:"Title, description, positioning", kind:"fields",
     hint:"The essentials for your module. Review each field and adjust anything that is not right.",
     fields: basics.fields.map(f=>_f(f)) });
