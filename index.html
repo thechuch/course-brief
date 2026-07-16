@@ -112,6 +112,11 @@
   .field input[type=text],.field textarea,.field select,.internalbox textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:12px 14px;resize:vertical;line-height:1.55;letter-spacing:-.006em}
   .internalbox textarea{background:#fff}
   .internalbox textarea::placeholder{color:var(--faint)}
+  .pnotes{margin-top:12px}
+  .pnotes label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:6px}
+  .pnotes textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:10px 12px;resize:vertical;line-height:1.5;letter-spacing:-.006em}
+  .pnotes textarea::placeholder{color:var(--faint)}
+  .pnotes textarea:focus{outline:none;border-color:var(--ink);background:#fff}
   .field textarea:focus,.field input:focus,.field select:focus,.internalbox textarea:focus{outline:none;border-color:var(--ink);background:#fff}
   .frow{display:flex;gap:9px;margin-top:13px;align-items:center;flex-wrap:wrap}
 
@@ -728,6 +733,7 @@ function lineupHTML(s){
         </div>
         <div class="rolehint"><b>${p.role}</b> · ${ROLE_HELP[p.role]||''}</div>
         <ul class="facts">${p.facts.map(f=>`<li><span class="k">${f[0]}</span>${f[1]}</li>`).join('')}</ul>
+        <div class="pnotes"><label>Notes · describe it in your own words (optional)</label><textarea rows="2" data-pnotes="${i}" placeholder="What it is, when a rep should reach for it, anything the facts above miss...">${esc(p.notes||'')}</textarea></div>
         <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button>`}</div>
       </div></div>`;
   });
@@ -960,6 +966,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{
   const ed=e.target.closest('[data-edit]'); if(ed){ const f=getField(ed.dataset.edit); if(f) f.value=ed.value; return; }
   const pn=e.target.closest('[data-pname]'); if(pn){ brief.steps[cur].products[pn.dataset.pname].name=pn.value; return; }
+  const pnt=e.target.closest('[data-pnotes]'); if(pnt){ brief.steps[cur].products[pnt.dataset.pnotes].notes=pnt.value; return; }
   const ff=e.target.closest('[data-fbf]'); if(ff){ brief.steps[cur].fb[ff.dataset.fbf].f=ff.value; return; }
   const fb2=e.target.closest('[data-fbb]'); if(fb2){ brief.steps[cur].fb[fb2.dataset.fbb].b=fb2.value; return; }
   const ec=e.target.closest('[data-examcomment]'); if(ec){ brief._examComment=ec.value; return; }
@@ -1042,7 +1049,7 @@ function hydrateFromDispatch(doc){
   if(lineup) steps.push({ id:"lineup", nav:"The lineup", sub:"Products, roles, facts", kind:"lineup",
     hint:"Each product becomes its own card. Check the <b>selling role</b> for each (the menu explains every role), and aim for 3 to 5 strong facts per product: production or aging, appearance, flavor, how to serve it.",
     ...(lineup.intro?{intro:_f(lineup.intro,"Lineup introduction")}:{}),
-    products: lineup.products.map(p=>({name:p.name, role:p.role, state:_stFrom[p.state]||"review", facts:(p.facts||[]).map(f=>Array.isArray(f)?f:[f.k,f.v]), _id:p.id})) });
+    products: lineup.products.map(p=>({name:p.name, role:p.role, state:_stFrom[p.state]||"review", facts:(p.facts||[]).map(f=>Array.isArray(f)?f:[f.k,f.v]), notes:p.notes||"", _id:p.id})) });
   if(selling) steps.push({ id:"selling", nav:"Why it sells", sub:"Features, benefits, awards", kind:"selling",
     hint:"How the brand sells, shown as <b>feature-and-benefit</b> cards. Review and refine the pairings.",
     fb: selling.fb.map(x=>({f:x.f, b:x.b, state:_stFrom[x.state]||"review"})),
@@ -1138,18 +1145,22 @@ function applyBackToDispatch(){
       // name/role/facts re-sync as the client keeps editing; unnamed new
       // rows are held out until they have a name.
       const rebuilt=[], seen=new Set();
+      // Notes fold: set when the client typed something, DELETED when
+      // they cleared it (a spread of the stored object would otherwise
+      // resurrect stale notes forever).
+      const foldNotes=(entry,ap)=>{ const nt=(ap.notes||"").trim(); if(nt) entry.notes=nt; else delete entry.notes; return entry; };
       s.products.forEach(ap=>{
         if(ap._id){
           if(seen.has(ap._id)) return; // repairs a brief already corrupted by the old append bug
           const d=lineup.products.find(x=>x.id===ap._id);
-          if(d){ seen.add(ap._id); rebuilt.push({ ...d, role:ap.role, state:_stTo[ap.state]||d.state||"prefilled" }); }
+          if(d){ seen.add(ap._id); rebuilt.push(foldNotes({ ...d, role:ap.role, state:_stTo[ap.state]||d.state||"prefilled" }, ap)); }
         } else if(ap._cid && (ap.name||"").trim()){
           if(seen.has(ap._cid)) return;
           seen.add(ap._cid);
           const prior=lineup.products.find(x=>x.id===ap._cid);
-          rebuilt.push({ ...(prior||{}), id:ap._cid, name:ap.name.trim(), role:ap.role||"DEFINE",
+          rebuilt.push(foldNotes({ ...(prior||{}), id:ap._cid, name:ap.name.trim(), role:ap.role||"DEFINE",
             facts:(ap.facts||[]).map(f=>Array.isArray(f)?{k:f[0],v:f[1]}:f),
-            why:"Client-added product", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" });
+            why:"Client-added product", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" }, ap));
         }
       });
       lineup.products = rebuilt;
@@ -1246,7 +1257,7 @@ function snapshotState(){
     const cap=(k,f)=>{ rec[k]={v:f.value??null,s:f.state,sk:!!f._skipped}; };
     if(st.kind==='fields'){ rec.fields=st.fields.map(f=>({v:f.value,s:f.state,sk:!!f._skipped})); }
     if(st.kind==='story'){ cap('intro',st.intro); cap('founder',st.founder); rec.tl=st.timeline.map(t=>({d:t.date,t:t.title,x:t.desc,s:t.state})); }
-    if(st.kind==='lineup'){ if(st.intro)cap('intro',st.intro); rec.prods=st.products.map(p=>({n:p.name,r:p.role,s:p.state,nw:!!p._new})); }
+    if(st.kind==='lineup'){ if(st.intro)cap('intro',st.intro); rec.prods=st.products.map(p=>({n:p.name,r:p.role,s:p.state,nw:!!p._new,no:p.notes||''})); }
     if(st.kind==='selling'){ rec.fb=st.fb.map(x=>({f:x.f,b:x.b,s:x.state,nw:!!x._new})); cap('awards',st.awards); if(st.channel)cap('channel',st.channel); }
     snap.steps[i]=rec;
   });
@@ -1264,7 +1275,7 @@ function restoreState(){
       if(st.kind==='fields'&&rec.fields) st.fields.forEach((f,j)=>app(f,rec.fields[j]));
       if(st.kind==='story'){ app(st.intro,rec.intro); app(st.founder,rec.founder);
         (rec.tl||[]).forEach((d,j)=>{ if(st.timeline[j]){ st.timeline[j].date=d.d;st.timeline[j].title=d.t;st.timeline[j].desc=d.x;st.timeline[j].state=d.s; } else { st.timeline.push({date:d.d,title:d.t,desc:d.x,state:d.s}); } }); }
-      if(st.kind==='lineup'){ if(st.intro)app(st.intro,rec.intro); (rec.prods||[]).forEach((d,j)=>{ if(st.products[j]){ st.products[j].role=d.r;st.products[j].state=d.s; if(d.nw)st.products[j].name=d.n; } else { st.products.push({name:d.n,role:d.r,state:d.s,facts:[],_new:true}); } }); }
+      if(st.kind==='lineup'){ if(st.intro)app(st.intro,rec.intro); (rec.prods||[]).forEach((d,j)=>{ if(st.products[j]){ st.products[j].role=d.r;st.products[j].state=d.s; if(d.nw)st.products[j].name=d.n; if(d.no!=null)st.products[j].notes=d.no; } else { st.products.push({name:d.n,role:d.r,state:d.s,facts:[],notes:d.no||'',_new:true,_cid:cbNewId('p')}); } }); }
       if(st.kind==='selling'){ (rec.fb||[]).forEach((d,j)=>{ if(st.fb[j]){ st.fb[j].state=d.s; if(d.nw){st.fb[j].f=d.f;st.fb[j].b=d.b;} } else { st.fb.push({f:d.f,b:d.b,state:d.s,_new:true}); } }); app(st.awards,rec.awards); if(st.channel)app(st.channel,rec.channel); }
     });
     brief._examOk=snap.examOk; brief._examComment=snap.examComment; brief._stubNote=snap.stubNote; brief._assetNote=snap.assetNote||'';
