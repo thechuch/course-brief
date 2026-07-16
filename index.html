@@ -954,8 +954,8 @@ document.addEventListener('click',e=>{
   }
   const fbok=e.target.closest('[data-fbok]'); if(fbok){ brief.steps[cur].fb[fbok.dataset.fbok].state='confirmed'; toast('Confirmed'); render(); return; }
   if(e.target.closest('[data-examok]')){ brief._examOk = true; toast('Approved, thank you'); render(); return; }
-  if(e.target.closest('[data-addprod]')){ brief.steps[cur].products.push({name:"", role:"DEFINE", state:"review", facts:[], _new:true}); render(); return; }
-  if(e.target.closest('[data-addfb]')){ brief.steps[cur].fb.push({f:"", b:"", state:"review", _new:true}); render(); return; }
+  if(e.target.closest('[data-addprod]')){ brief.steps[cur].products.push({name:"", role:"DEFINE", state:"review", facts:[], _new:true, _cid:cbNewId('p')}); render(); return; }
+  if(e.target.closest('[data-addfb]')){ brief.steps[cur].fb.push({f:"", b:"", state:"review", _new:true, _cid:cbNewId('fb')}); render(); return; }
 });
 document.addEventListener('input',e=>{
   const ed=e.target.closest('[data-edit]'); if(ed){ const f=getField(ed.dataset.edit); if(f) f.value=ed.value; return; }
@@ -1089,6 +1089,15 @@ function splitClientComment(raw){
   return out;
 }
 
+// Stable, unique id for a client-added item, assigned ONCE at creation.
+// applyBackToDispatch runs on EVERY debounced autosave, so folding the
+// UI back into dispatchDoc must be idempotent: keying client items by a
+// stable id (instead of blindly pushing) is what stops one added product
+// from multiplying into three across successive saves (owner bug
+// 2026-07-15). Time + counter keeps it unique across reloads and tabs.
+let _cbCidSeq=0;
+function cbNewId(prefix){ return prefix+'_c_'+Date.now().toString(36)+'_'+(++_cbCidSeq).toString(36); }
+
 function applyBackToDispatch(){
   const doc = dispatchDoc;
   const basics = _sec(doc,"basics"), story = _sec(doc,"story"), lineup = _sec(doc,"lineup"),
@@ -1122,21 +1131,47 @@ function applyBackToDispatch(){
     }
     if(s.id==="lineup" && lineup){
       if(lineup.intro && s.intro) put(lineup.intro, s.intro);
-      s.products.forEach((ap,pi)=>{
-      if(ap._id){ const d=lineup.products.find(x=>x.id===ap._id);
-        if(d){ d.role=ap.role; d.state=_stTo[ap.state]||"prefilled"; } }
-      else if((ap.name||"").trim()){ lineup.products.push({ id:"p_c"+(pi+1), name:ap.name.trim(), role:ap.role||"DEFINE",
-        facts:(ap.facts||[]).map(f=>Array.isArray(f)?{k:f[0],v:f[1]}:f),
-        why:"Client-added product", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" }); }
+      // REBUILD (not append): a fresh products array keyed by stable id
+      // each call, so repeated autosaves are idempotent. Server products
+      // (ap._id) keep their stored object with role/state overlaid;
+      // client-added products (ap._cid) map to ONE stable entry whose
+      // name/role/facts re-sync as the client keeps editing; unnamed new
+      // rows are held out until they have a name.
+      const rebuilt=[], seen=new Set();
+      s.products.forEach(ap=>{
+        if(ap._id){
+          if(seen.has(ap._id)) return; // repairs a brief already corrupted by the old append bug
+          const d=lineup.products.find(x=>x.id===ap._id);
+          if(d){ seen.add(ap._id); rebuilt.push({ ...d, role:ap.role, state:_stTo[ap.state]||d.state||"prefilled" }); }
+        } else if(ap._cid && (ap.name||"").trim()){
+          if(seen.has(ap._cid)) return;
+          seen.add(ap._cid);
+          const prior=lineup.products.find(x=>x.id===ap._cid);
+          rebuilt.push({ ...(prior||{}), id:ap._cid, name:ap.name.trim(), role:ap.role||"DEFINE",
+            facts:(ap.facts||[]).map(f=>Array.isArray(f)?{k:f[0],v:f[1]}:f),
+            why:"Client-added product", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" });
+        }
       });
+      lineup.products = rebuilt;
     }
     if(s.id==="selling" && selling){
       if(selling.channel && s.channel) put(selling.channel, s.channel);
+      // Same idempotent rebuild as lineup. Feature-benefit pairs carry no
+      // id in the schema, so server pairs map by position (client rows
+      // are always appended after them) and their f/b text re-syncs every
+      // save instead of freezing at whatever the first autosave caught.
+      const rebuiltFb=[];
       s.fb.forEach((ax,i)=>{
-        if(selling.fb[i]){ selling.fb[i].state=_stTo[ax.state]||"prefilled"; }
-        else if((ax.f||"").trim()||(ax.b||"").trim()){ selling.fb.push({ f:(ax.f||"").trim(), b:(ax.b||"").trim(),
-          why:"Client-added pairing", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" }); }
+        if(ax._new){
+          if(!((ax.f||"").trim()||(ax.b||"").trim())) return;
+          rebuiltFb.push({ f:(ax.f||"").trim(), b:(ax.b||"").trim(),
+            why:"Client-added pairing", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" });
+        } else {
+          const d=selling.fb[i];
+          if(d) rebuiltFb.push({ ...d, state:_stTo[ax.state]||d.state||"prefilled" });
+        }
       });
+      selling.fb = rebuiltFb;
       put(selling.awards, s.awards);
     }
   });
