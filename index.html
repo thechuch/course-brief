@@ -109,12 +109,12 @@
   .sp-needs{background:#F2F0EB;color:var(--sub);border:1px dashed var(--line)} .sp-needs .d{background:var(--faint)}
   .source{font-size:11.5px;color:var(--faint);margin-bottom:10px;display:flex;align-items:center;gap:6px;letter-spacing:0}
   .source svg{opacity:.7}
-  .field input[type=text],.field textarea,.field select,.internalbox textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:12px 14px;resize:vertical;line-height:1.55;letter-spacing:-.006em}
+  .field input[type=text],.field textarea,.field select,.internalbox textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:12px 14px;resize:none;overflow:hidden;line-height:1.55;letter-spacing:-.006em}
   .internalbox textarea{background:#fff}
   .internalbox textarea::placeholder{color:var(--faint)}
   .pnotes{margin-top:12px}
   .pnotes label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:6px}
-  .pnotes textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:10px 12px;resize:vertical;line-height:1.5;letter-spacing:-.006em}
+  .pnotes textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:10px 12px;resize:none;overflow:hidden;line-height:1.5;letter-spacing:-.006em}
   .pnotes textarea::placeholder{color:var(--faint)}
   .pnotes textarea:focus{outline:none;border-color:var(--ink);background:#fff}
   .field textarea:focus,.field input:focus,.field select:focus,.internalbox textarea:focus{outline:none;border-color:var(--ink);background:#fff}
@@ -165,6 +165,8 @@
   .roletag{display:flex;align-items:center;gap:8px;margin:11px 0 4px}
   .roletag label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
   .roletag select{width:auto;max-width:min(100%,320px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 30px 6px 12px;font-weight:600;font-size:12.5px;color:var(--flare-deep);background:var(--flare-wash);border:1px solid var(--flare);border-radius:999px}
+  .roletag input[type=text]{width:auto;max-width:min(100%,320px);padding:6px 14px;font-weight:600;font-size:12.5px;color:var(--flare-deep);background:var(--flare-wash);border:1px solid var(--flare);border-radius:999px;font-family:inherit}
+  .roletag input[type=text]:focus{outline:none;border-color:var(--flare-deep);background:#fff}
   .rolehint{font-size:12.5px;color:var(--sub);margin:2px 0 6px;line-height:1.45}
   /* upload dropzone */
   .dropzone{margin-top:18px;border:2px dashed var(--flare);border-radius:16px;background:linear-gradient(180deg,#FFFDF7,#fff);padding:34px 22px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s,transform .1s}
@@ -567,6 +569,8 @@ function assetControl(f, ctx, idx){
     </div>`;
 }
 
+function autosize(ta){ ta.style.height='auto'; ta.style.height=(ta.scrollHeight+2)+'px'; }
+function autosizeAll(){ document.querySelectorAll('textarea').forEach(autosize); }
 function render(){
   // rail
   // No rail title: the top bar already carries brand + module (the long
@@ -744,6 +748,18 @@ function storyHTML(s){
 // One selling job per product. Worded to fit any category (wine, agave,
 // whiskey, liqueur, RTD), never a category-specific term.
 const ROLE_HELP={
+  "Flagship":"The bottle that states what the brand stands for.",
+  "Everyday anchor":"The reliable core seller accounts reorder.",
+  "Entry point":"The easy first buy that wins new drinkers.",
+  "Conversation starter":"The pour that earns a first taste and a story.",
+  "Credibility pick":"The choice that proves the brand to enthusiasts.",
+  "New occasions":"Opens accounts, menus, or moments the brand is not in yet.",
+  "Special occasion":"The celebration and gifting pick.",
+  "Rare trade-up":"The limited bottle at the top of the range.",
+};
+/* Earlier briefs carry the original uppercase role names; they render
+   with their old help text and are never rewritten in place. */
+const LEGACY_ROLE_HELP={
   DEFINE:"The flagship. States what the brand stands for.",
   ANCHOR:"The everyday core. Your reliable volume seller.",
   BROADEN:"Reaches new guests and new occasions.",
@@ -753,6 +769,7 @@ const ROLE_HELP={
   TWILIGHT:"The celebration and special-occasion pick.",
   DEPTH:"The rare, limited trade-up at the top of the range.",
 };
+const roleHelp=r=>ROLE_HELP[r]||LEGACY_ROLE_HELP[r]||"Your own selling role.";
 function lineupHTML(s){
   let h='';
   if(s.intro) h+=fieldCard(s.intro,'intro','lineup');
@@ -763,10 +780,12 @@ function lineupHTML(s){
       <div>
         <div class="phead">${nameEl}${pill(p.state)}</div>
         <div class="roletag"><label>Selling role</label>
-          <select data-role="${i}" aria-label="Selling role">${Object.keys(ROLE_HELP).map(r=>`<option value="${r}" ${r===p.role?'selected':''}>${r} · ${ROLE_HELP[r]}</option>`).join('')}</select>
+          ${p._roleCustom
+            ? `<input type="text" data-rolecustom="${i}" placeholder="Your selling role (e.g. Patio pour)" value="${(p.role||'').replace(/"/g,'&quot;')}" aria-label="Custom selling role">`
+            : `<select data-role="${i}" aria-label="Selling role">${[...(p.role&&!ROLE_HELP[p.role]?[p.role]:[]),...Object.keys(ROLE_HELP)].map(r=>`<option value="${r}" ${r===p.role?'selected':''}>${r} · ${roleHelp(r)}</option>`).join('')}<option value="__custom__">Write your own role…</option></select>`}
           <span class="why">i<span class="whytip">Every product gets one clear selling job so a rep always knows which bottle fits the moment. Open the menu to see what each role means, and change ours if it reads wrong.</span></span>
         </div>
-        <div class="rolehint"><b>${p.role}</b> · ${ROLE_HELP[p.role]||''}</div>
+        <div class="rolehint"><b>${p.role}</b> · ${roleHelp(p.role)}</div>
         <ul class="facts">${p.facts.map(f=>`<li><span class="k">${f[0]}</span>${f[1]}</li>`).join('')}</ul>
         <div class="pnotes"><label>Notes · describe it in your own words (optional)</label><textarea rows="2" data-pnotes="${i}" placeholder="What it is, when a rep should reach for it, anything the facts above miss...">${esc(p.notes||'')}</textarea></div>
         <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button>`}</div>
@@ -835,6 +854,8 @@ function assetsHTML(){
 const UP_MAX_BYTES=2*1024*1024*1024, UP_MAX_COUNT=30;
 let upActive=0; const upQueue=[];
 function renderUploads(){ const el=document.getElementById('uplist'); if(el) el.innerHTML=uploadsListHTML(); }
+/* Textareas size to their content on every paint (rAF: after layout). */
+const _origRender=render; render=function(){ _origRender(); requestAnimationFrame(autosizeAll); };
 function paintProgress(u){
   const i=(brief._uploads||[]).indexOf(u); if(i<0) return;
   const bar=document.querySelector(`[data-upbar="${i}"]`);
@@ -1000,6 +1021,8 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-addfb]')){ brief.steps[cur].fb.push({f:"", b:"", state:"review", _new:true, _cid:cbNewId('fb')}); render(); return; }
 });
 document.addEventListener('input',e=>{
+  if(e.target.tagName==='TEXTAREA') autosize(e.target);
+  const rc=e.target.closest('[data-rolecustom]'); if(rc){ brief.steps[cur].products[rc.dataset.rolecustom].role=rc.value; return; }
   const ed=e.target.closest('[data-edit]'); if(ed){ const f=getField(ed.dataset.edit); if(f) f.value=ed.value; return; }
   const pn=e.target.closest('[data-pname]'); if(pn){ brief.steps[cur].products[pn.dataset.pname].name=pn.value; return; }
   const pnt=e.target.closest('[data-pnotes]'); if(pnt){ brief.steps[cur].products[pnt.dataset.pnotes].notes=pnt.value; return; }
@@ -1009,7 +1032,12 @@ document.addEventListener('input',e=>{
   const sn=e.target.closest('[data-stubnote]'); if(sn){ brief._stubNote=sn.value; return; }
   const an=e.target.closest('[data-assetnote]'); if(an){ brief._assetNote=an.value; return; }
 });
-document.addEventListener('change',e=>{ const r=e.target.closest('[data-role]'); if(r){ brief.steps[cur].products[r.dataset.role].role=r.value; render(); } });
+document.addEventListener('change',e=>{
+  const r=e.target.closest('[data-role]');
+  if(r){ const p=brief.steps[cur].products[r.dataset.role]; if(r.value==='__custom__'){ p._roleCustom=true; } else { p.role=r.value; } render(); return; }
+  const rc=e.target.closest('[data-rolecustom]');
+  if(rc){ const p=brief.steps[cur].products[rc.dataset.rolecustom]; p.role=rc.value.trim()||p.role; p._roleCustom=false; render(); }
+});
 document.getElementById('backbtn').onclick=()=>{ if(cur>0){cur--;render();} };
 document.getElementById('nextbtn').onclick=()=>{
   if(cur<brief.steps.length-1){cur++;render();return;}
