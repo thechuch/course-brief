@@ -774,7 +774,7 @@ function lineupHTML(s){
   let h='';
   if(s.intro) h+=fieldCard(s.intro,'intro','lineup');
   s.products.forEach((p,i)=>{
-    const nameEl = p._new ? `<input type="text" data-pname="${i}" placeholder="Product name" value="${(p.name||'').replace(/"/g,'&quot;')}" style="font-weight:700;font-size:16px">` : `<div class="pname">${p.name}</div>`;
+    const nameEl = `<input type="text" data-pname="${i}" placeholder="Product name" value="${(p.name||'').replace(/"/g,'&quot;')}" style="font-weight:700;font-size:16px" aria-label="Product name">`;
     h+=`<div class="prod ${p.state==='confirmed'?'confirmed':''}">
       <div class="pshot"><div class="rings"></div>bottle shot<br>we'll source it</div>
       <div>
@@ -1222,7 +1222,7 @@ function applyBackToDispatch(){
         if(ap._id){
           if(seen.has(ap._id)) return; // repairs a brief already corrupted by the old append bug
           const d=lineup.products.find(x=>x.id===ap._id);
-          if(d){ seen.add(ap._id); rebuilt.push(foldNotes({ ...d, role:ap.role, state:_stTo[ap.state]||d.state||"prefilled" }, ap)); }
+          if(d){ seen.add(ap._id); rebuilt.push(foldNotes({ ...d, name:(ap.name||"").trim()||d.name, role:ap.role, state:_stTo[ap.state]||d.state||"prefilled" }, ap)); }
         } else if(ap._cid && (ap.name||"").trim()){
           if(seen.has(ap._cid)) return;
           seen.add(ap._cid);
