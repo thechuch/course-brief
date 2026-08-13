@@ -161,6 +161,10 @@
   .pshot{width:120px;height:170px;border-radius:12px;background:repeating-conic-gradient(#EFECE4 0% 25%,#F7F5F0 0% 50%) 50%/16px 16px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--faint);font-size:11px;text-align:center;gap:8px;padding:8px}
   .pshot .rings{width:32px;height:32px;border-radius:50%;background:#000;box-shadow:0 0 0 1px var(--flare),0 0 10px 1px rgba(241,187,100,.5);opacity:.55}
   .phead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  #netblock{position:fixed;left:16px;right:16px;bottom:82px;z-index:60;background:var(--ink);color:#fff;border-radius:12px;padding:14px 44px 14px 18px;font-size:13.5px;line-height:1.5;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  #netblock b{color:var(--flare, #E8B563)}
+  #netblock button{position:absolute;top:10px;right:12px;background:none;border:none;color:#fff;font-size:14px;cursor:pointer;opacity:.7}
+  #netblock button:hover{opacity:1}
   .pname-input{flex:1 1 100%;width:100%;min-width:0;font-family:inherit;font-weight:700;font-size:17px;letter-spacing:-.01em;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:9px;padding:6px 10px;margin-left:-10px;transition:border-color .15s ease, background .15s ease}
   .pname-input:hover{border-color:var(--line);background:var(--wash)}
   .pname-input:focus{outline:none;border-color:var(--ink);background:#fff}
@@ -535,10 +539,10 @@ function fieldCard(f, idx, ctx){
   const empty = !(f.value||'').trim() && f.type!=='asset';
   const ph = empty ? `Our research didn't turn this up, so we left it blank rather than guess. You're the source here.` : '';
   const control = f.type==='textarea'
-      ? `<textarea rows="3" data-edit="${ctx}:${idx}" placeholder="${ph}">${f.value}</textarea>`
+      ? `<textarea rows="3" data-edit="${ctx}:${idx}" placeholder="${ph}">${esc(f.value)}</textarea>`
       : f.type==='asset'
       ? assetControl(f, ctx, idx)
-      : `<input type="text" data-edit="${ctx}:${idx}" placeholder="${ph}" value="${f.value.replace(/"/g,'&quot;')}">`;
+      : `<input type="text" data-edit="${ctx}:${idx}" placeholder="${ph}" value="${esc(f.value)}">`;
   const actions = f.state==='confirmed'
       ? `<button class="btn sm" data-unconfirm="${ctx}:${idx}">Edit</button>`
       : empty
@@ -548,12 +552,12 @@ function fieldCard(f, idx, ctx){
       : `<button class="btn ok sm" data-confirm="${ctx}:${idx}">✓ Looks right</button><button class="btn sm ghost" data-focus="${ctx}:${idx}">Make changes</button>`;
   const hasAdd = f._sugg && f._sugg.some(c=>c.kind==='add');
   const chips = (f._sugg && f._sugg.length && f.state!=='confirmed')
-    ? `<span class="chipslbl">${empty?'Start from one of these:':(hasAdd?'From our research, tap to add:':'Tap to add:')}</span><div class="chips">${f._sugg.map((c,ci)=>`<button class="chip ${c.kind}" data-chip="${ctx}:${idx}:${ci}" title="${c.kind==='add'?'From our research, verified':'Idea starter'}">${c.label.replace(/^\+\s*/,'')}</button>`).join('')}</div>`
+    ? `<span class="chipslbl">${empty?'Start from one of these:':(hasAdd?'From our research, tap to add:':'Tap to add:')}</span><div class="chips">${f._sugg.map((c,ci)=>`<button class="chip ${esc(c.kind)}" data-chip="${ctx}:${idx}:${ci}" title="${c.kind==='add'?'From our research, verified':'Idea starter'}">${esc(c.label.replace(/^\+\s*/,''))}</button>`).join('')}</div>`
     : '';
   const stateCls = f.state==='confirmed'?'confirmed':(empty||f.state==='needs'?'needs':'');
   return `<div class="field ${stateCls} ${f._flash?'justdone':''}">
-    <div class="fhead"><div class="flabel">${f.label}${f.why?`<button type="button" class="why" aria-label="Why we ask this">i<span class="whytip">${f.why}</span></button>`:''}</div>${f._skipped?'<span class="statepill sp-review"><span class="d"></span>We\'ll follow up</span>':pill(empty?'needs':f.state)}</div>
-    <div class="source">${svgSource} ${f.source}</div>
+    <div class="fhead"><div class="flabel">${esc(f.label)}${f.why?`<button type="button" class="why" aria-label="Why we ask this">i<span class="whytip">${esc(f.why)}</span></button>`:''}</div>${f._skipped?'<span class="statepill sp-review"><span class="d"></span>We\'ll follow up</span>':pill(empty?'needs':f.state)}</div>
+    <div class="source">${svgSource} ${esc(f.source)}</div>
     ${control}
     ${chips}
     <div class="frow">${actions}</div>
@@ -590,7 +594,7 @@ function render(){
     const badge=st==='done'?'✓':st==='internal'?'SC':(i===0?'✦':i-1);
     rh+=`<div class="step ${i===cur?'active':''} ${cls}" data-go="${i}">
       <div class="sd">${badge}</div>
-      <div><div class="st">${s.nav}</div><div class="ss">${s.sub}</div></div></div>`;
+      <div><div class="st">${esc(s.nav)}</div><div class="ss">${esc(s.sub)}</div></div></div>`;
   });
   const togo=t.total-t.done;
   rh+=`<div class="railmeter"><div class="rm-t"><span>Your review</span><b>${t.done}/${t.total}</b></div><div class="rm-b"><i style="width:${t.pct}%"></i></div><div class="rm-n">${togo===0?'All set, ready to submit':`${togo} quick look${togo===1?'':'s'} to go${t.needsYou?` · ${t.needsYou} need you`:''}`}</div></div>`;
@@ -608,8 +612,8 @@ function render(){
   else if(s.kind==='intro') m=introHTML();
   else if(s.kind==='welcome') m=welcomeHTML();
   else{
-    m=`<div class="eyebrow">Step ${cur-1} of ${brief.steps.length-2}</div><h1>${s.nav}</h1>`;
-    if(s.hint) m+=`<div class="sechint"><span class="ic">✎</span><div>${s.hint}</div></div>`;
+    m=`<div class="eyebrow">Step ${cur-1} of ${brief.steps.length-2}</div><h1>${esc(s.nav)}</h1>`;
+    if(s.hint) m+=`<div class="sechint"><span class="ic">✎</span><div>${esc(s.hint)}</div></div>`;
     const reviewables = s.kind==='fields' ? (s.fields||[]).filter(f=>(f.value||'').trim()&&f.state==='review')
       : s.kind==='lineup' ? s.products.filter(p=>p.state==='review')
       : s.kind==='selling' ? s.fb.filter(x=>x.state==='review')
@@ -620,7 +624,7 @@ function render(){
     else if(s.kind==='story') m+=storyHTML(s);
     else if(s.kind==='lineup') m+=lineupHTML(s);
     else if(s.kind==='selling') m+=sellingHTML(s);
-    else if(s.kind==='stub') m+=`<div class="internalbox"><div class="lbl">We'll build this with you</div><p style="margin-top:10px;color:var(--sub);font-size:14px">${s.stubnote}</p><div style="margin-top:14px"><textarea rows="3" data-stubnote placeholder="Anything you can share now helps: process steps, equipment, timings, what makes it yours...">${brief._stubNote||''}</textarea></div></div>`;
+    else if(s.kind==='stub') m+=`<div class="internalbox"><div class="lbl">We'll build this with you</div><p style="margin-top:10px;color:var(--sub);font-size:14px">${esc(s.stubnote)}</p><div style="margin-top:14px"><textarea rows="3" data-stubnote placeholder="Anything you can share now helps: process steps, equipment, timings, what makes it yours...">${esc(brief._stubNote||'')}</textarea></div></div>`;
     else if(s.kind==='assets') m+=assetsHTML();
     else if(s.kind==='exam') m+=examHTML();
   }
@@ -663,7 +667,7 @@ function submitSummaryHTML(){
     if(st.kind==='story'){chk(st.intro);chk(st.founder);st.timeline.forEach(t=>{if(t.state!=='confirmed')open++;});}
     if(st.kind==='lineup'){if(st.intro)chk(st.intro);st.products.forEach(p=>{if(p.state!=='confirmed')open++;});}
     if(st.kind==='selling'){st.fb.forEach(x=>{if(x.state!=='confirmed')open++;});chk(st.awards);if(st.channel)chk(st.channel);}
-    return open>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><span>${st.nav} · <b>${open}</b> still open</span><button class="btn sm" data-go="${i}">Review</button></div>`:'';
+    return open>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><span>${esc(st.nav)} · <b>${open}</b> still open</span><button class="btn sm" data-go="${i}">Review</button></div>`:'';
   }).join('');
   return `<div class="eyebrow">Almost there</div><h1>Before you send it back</h1>
     <p class="lead">A few items are still open. Anything you leave, we'll follow up on together, nothing gets lost.</p>
@@ -693,11 +697,11 @@ function introHTML(){
   const how = [
     ["We drafted it for you", "Everything here was pre-filled from your calls, your materials, and our research. Every field shows exactly where its information came from."],
     ["You look it over", "Confirm what's right, fix what isn't, and add the few things only you know. Nothing goes into the course until you approve it."],
-    ["We build your course", `Your approved content becomes the designed, interactive course${course && course.working_title ? ` "${course.working_title}"` : ""}, with a short knowledge check at the end.`],
+    ["We build your course", `Your approved content becomes the designed, interactive course${course && course.working_title ? ` "${esc(course.working_title)}"` : ""}, with a short knowledge check at the end.`],
   ].map((x,i)=>`<div class="ihow"><span class="ihn">${String(i+1).padStart(2,'0')}</span><div><b>${x[0]}</b><p>${x[1]}</p></div></div>`).join('');
   return `<div class="welcome intro">
-    <h1>We're building ${brief.brand}'s e-learning course.</h1>
-    <p class="lead">Small Circle is turning your brand's story into a ${runtime} interactive training course for ${audience}. Before we design a single screen, the facts have to be right. That's what this link is: your course content, drafted and ready for your review.</p>
+    <h1>We're building ${esc(brief.brand)}'s e-learning course.</h1>
+    <p class="lead">Small Circle is turning your brand's story into a ${runtime} interactive training course for ${esc(audience)}. Before we design a single screen, the facts have to be right. That's what this link is: your course content, drafted and ready for your review.</p>
     <div class="ihowwrap">${how}</div>
     <div class="ireassure"><span>About 15 minutes</span><span>Saves automatically, on any device</span><span>A real person is one reply away</span></div>
     <div style="margin-top:26px"><button class="btn cta" data-introgo>${hasProgress?'Pick up where you left off →':'Get started →'}</button></div>
@@ -705,7 +709,7 @@ function introHTML(){
 }
 function welcomeHTML(){
   const covers=brief.steps.filter(s=>['fields','story','lineup','selling','stub','assets'].includes(s.kind));
-  const items=covers.map((s,i)=>`<div class="wc"><span class="wn">${String(i+1).padStart(2,'0')}</span><div><b>${s.nav}</b><span>${s.sub}</span></div></div>`).join('');
+  const items=covers.map((s,i)=>`<div class="wc"><span class="wn">${String(i+1).padStart(2,'0')}</span><div><b>${esc(s.nav)}</b><span>${esc(s.sub)}</span></div></div>`).join('');
   const t=tally();
   const drafted=t.total-t.needsYou;
   // "hasProgress" means real saved progress exists (a server draft in
@@ -740,8 +744,8 @@ function storyHTML(s){
     h+=`<div class="tlitem ${t.state==='confirmed'?'confirmed':''}">
       <div class="tlnode"><div class="dot"></div>${last?'':'<div class="line"></div>'}</div>
       <div class="tlbody">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div class="tldate">${t.date}</div><div class="tltitle">${t.title}</div></div>${pill(t.state)}</div>
-        <div class="tldesc">${t.desc}</div>
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div class="tldate">${esc(t.date)}</div><div class="tltitle">${esc(t.title)}</div></div>${pill(t.state)}</div>
+        <div class="tldesc">${esc(t.desc)}</div>
         <div class="tlmeta"><span class="chipmini">${svgSource} photo: we'll source it</span>
           ${t.state==='confirmed'?`<button class="btn sm" data-tlunc="${i}">Edit</button>`:`<button class="btn ok sm" data-tlok="${i}">✓ Looks right</button>`}
         </div>
@@ -779,19 +783,19 @@ function lineupHTML(s){
   let h='';
   if(s.intro) h+=fieldCard(s.intro,'intro','lineup');
   s.products.forEach((p,i)=>{
-    const nameEl = `<input type="text" class="pname-input" data-pname="${i}" placeholder="Product name" value="${(p.name||'').replace(/"/g,'&quot;')}" aria-label="Product name">`;
+    const nameEl = `<input type="text" class="pname-input" data-pname="${i}" placeholder="Product name" value="${esc(p.name||'')}" aria-label="Product name">`;
     h+=`<div class="prod ${p.state==='confirmed'?'confirmed':''}">
       <div class="pshot"><div class="rings"></div>bottle shot<br>we'll source it</div>
       <div>
         <div class="phead">${nameEl}${pill(p.state)}</div>
         <div class="roletag"><label>Selling role</label>
           ${p._roleCustom
-            ? `<input type="text" data-rolecustom="${i}" placeholder="Your selling role (e.g. Patio pour)" value="${(p.role||'').replace(/"/g,'&quot;')}" aria-label="Custom selling role">`
-            : `<select data-role="${i}" aria-label="Selling role">${[...(p.role&&!ROLE_HELP[p.role]?[p.role]:[]),...Object.keys(ROLE_HELP)].map(r=>`<option value="${r}" ${r===p.role?'selected':''}>${r} · ${roleHelp(r)}</option>`).join('')}<option value="__custom__">Write your own role…</option></select>`}
+            ? `<input type="text" data-rolecustom="${i}" placeholder="Your selling role (e.g. Patio pour)" value="${esc(p.role||'')}" aria-label="Custom selling role">`
+            : `<select data-role="${i}" aria-label="Selling role">${[...(p.role&&!ROLE_HELP[p.role]?[p.role]:[]),...Object.keys(ROLE_HELP)].map(r=>`<option value="${esc(r)}" ${r===p.role?'selected':''}>${esc(r)} · ${roleHelp(r)}</option>`).join('')}<option value="__custom__">Write your own role…</option></select>`}
           <span class="why">i<span class="whytip">Every product gets one clear selling job so a rep always knows which bottle fits the moment. Open the menu to see what each role means, and change ours if it reads wrong.</span></span>
         </div>
-        <div class="rolehint"><b>${p.role}</b> · ${roleHelp(p.role)}</div>
-        <ul class="facts">${p.facts.map(f=>`<li><span class="k">${f[0]}</span>${f[1]}</li>`).join('')}</ul>
+        <div class="rolehint"><b>${esc(p.role)}</b> · ${roleHelp(p.role)}</div>
+        <ul class="facts">${p.facts.map(f=>`<li><span class="k">${esc(f[0])}</span>${esc(f[1])}</li>`).join('')}</ul>
         <div class="pnotes"><label>Notes · describe it in your own words (optional)</label><textarea rows="2" data-pnotes="${i}" placeholder="What it is, when a rep should reach for it, anything the facts above miss...">${esc(p.notes||'')}</textarea></div>
         <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button>`}</div>
       </div></div>`;
@@ -803,14 +807,14 @@ function lineupHTML(s){
 function sellingHTML(s){
   let h=`<div class="fb">`;
   s.fb.forEach((x,i)=>{
-    const fEl = x._new ? `<input type="text" data-fbf="${i}" placeholder="Feature" value="${(x.f||'').replace(/"/g,'&quot;')}">` : `<div class="fbt">${x.f}</div>`;
-    const bEl = x._new ? `<input type="text" data-fbb="${i}" placeholder="Benefit for the buyer" value="${(x.b||'').replace(/"/g,'&quot;')}">` : `<div class="fbb">${x.b}</div>`;
+    const fEl = x._new ? `<input type="text" data-fbf="${i}" placeholder="Feature" value="${esc(x.f||'')}">` : `<div class="fbt">${esc(x.f)}</div>`;
+    const bEl = x._new ? `<input type="text" data-fbb="${i}" placeholder="Benefit for the buyer" value="${esc(x.b||'')}">` : `<div class="fbb">${esc(x.b)}</div>`;
     h+=`<div class="fbcard"><div class="fbf">Feature</div>${fEl}<div class="fbf" style="color:var(--faint)">Benefit ↓</div>${bEl}<div class="frow" style="margin-top:12px">${x.state==='confirmed'?pill('confirmed'):`<button class="btn ok sm" data-fbok="${i}">✓ Looks right</button>`}</div></div>`;
   });
   h+=`</div>`;
   if(!s.fb.length) h=`<p class="lead" style="font-size:14px">Our research didn't surface verified feature-and-benefit pairs, so we left these open rather than guessing. Add the pairings you lean on:</p>`+h;
   if(window.__dispatchMode) h+=`<div class="addrow" style="margin-top:10px"><button class="btn" data-addfb>＋ Add a pairing</button></div>`;
-  h+=`<h1 style="font-size:18px;margin:28px 0 2px">Proof marks</h1><p class="lead" style="font-size:14px">Pulled from your positioning. These become trust badges in the selling lesson.</p><div class="marks">${s.marks.map(m=>`<span class="mark"><span class="mk"></span>${m}</span>`).join('')}</div>`;
+  h+=`<h1 style="font-size:18px;margin:28px 0 2px">Proof marks</h1><p class="lead" style="font-size:14px">Pulled from your positioning. These become trust badges in the selling lesson.</p><div class="marks">${s.marks.map(m=>`<span class="mark"><span class="mk"></span>${esc(m)}</span>`).join('')}</div>`;
   h+=`<div style="margin-top:24px">${fieldCard(s.awards,'awards','selling')}</div>`;
   if(s.channel) h+=`<div style="margin-top:16px">${fieldCard(s.channel,'channel','selling')}</div>`;
   return h;
@@ -897,6 +901,18 @@ async function upConfirm(u){
     throw Object.assign(new Error('confirm failed'),{friendly:body.friendly});
   }
 }
+let _netFails = 0, _netDismissed = false;
+function noteNetOk(){ _netFails = 0; _netDismissed = false; const b=document.getElementById('netblock'); if(b) b.remove(); }
+function noteNetFail(){
+  _netFails += 1;
+  if (_netDismissed || _netFails < 2 || document.getElementById('netblock')) return;
+  const d = document.createElement('div');
+  d.id = 'netblock';
+  d.innerHTML = '<b>Trouble saving or uploading?</b> Some office networks block these requests. Try a phone hotspot or home Wi-Fi, or email your files and notes to your Small Circle contact and we\u2019ll add them for you. <button id="netblock-x" aria-label="Dismiss">\u2715</button>';
+  document.body.appendChild(d);
+  const x = document.getElementById('netblock-x');
+  if (x) x.onclick = () => { _netDismissed = true; d.remove(); };
+}
 async function uploadOne(u){
   try{
     // Confirm-only retry: the bytes already landed, never re-upload them.
@@ -928,14 +944,22 @@ async function uploadOne(u){
       x.upload.onprogress=e=>{ if(e.lengthComputable){ u.pct=Math.round(e.loaded/e.total*100); paintProgress(u); } };
       x.onload=()=>{ if(x.status>=200&&x.status<300){resolve();}else{reject(new Error('upload failed ('+x.status+')'));} };
       x.onerror=()=>reject(new Error('network hiccup'));
+      // A proxy that blackholes the cross-origin PUT would otherwise leave
+      // this XHR pending forever and wedge the upload pump; time it out
+      // (generous, scaled to size) so it surfaces as a network failure.
+      x.timeout = Math.max(120000, Math.round((u.file.size||0)/2000));
+      x.ontimeout=()=>reject(new Error('network hiccup'));
+      x.onabort=()=>reject(new Error('network hiccup'));
       x.send(u.file);
     });
     u.putDone=true;
     await upConfirm(u);
+    noteNetOk();
     u.state='done'; u.pct=100; renderUploads(); toast('Received: '+u.name);
   }catch(err){
     u.state='failed';
     u.err=(err&&err.friendly)||"Didn't go through. Check your connection and try again.";
+    if (err instanceof TypeError || /network hiccup/.test((err&&err.message)||'')) noteNetFail();
     renderUploads();
   }
 }
@@ -953,13 +977,13 @@ function examHTML(){
   // put "Knowledge check" on the page twice (owner bug report 2026-07-14).
   const intro = `<div class="sechint"><span class="ic">✎</span><div>A short check closes the course: <b>ten questions max</b>, learners pass at <b>80%</b> and can retake it. Here's a first draft based on what you confirmed, have a look and flag anything you'd change.</div></div>`;
   if(brief._exam){
-    const qs = brief._exam.length ? brief._exam.map((q,i)=>`<div class="exq"><div class="q">${i+1} &nbsp;${q.stem}</div>
-        <div class="opts">${q.options.map(o=>`<div class="opt ${o.correct?'correct':''}">${o.text}</div>`).join('')}</div></div>`).join('')
+    const qs = brief._exam.length ? brief._exam.map((q,i)=>`<div class="exq"><div class="q">${i+1} &nbsp;${esc(q.stem)}</div>
+        <div class="opts">${q.options.map(o=>`<div class="opt ${o.correct?'correct':''}">${esc(o.text)}</div>`).join('')}</div></div>`).join('')
       : `<p style="color:var(--sub);font-size:14px">We'll draft the knowledge check from the sections you confirm here.</p>`;
     return intro + `<div class="internalbox"><div class="lbl">Draft preview</div>${qs}
       <div class="frow" style="margin-top:16px">${brief._examOk?`<span class="statepill sp-confirmed"><span class="d"></span>Approved, we'll finalize the questions</span>`:`<button class="btn pri" data-examok>Looks good</button>`}</div>
       <div style="margin-top:14px"><div class="fbf" style="margin-bottom:6px">Anything to change or add? Tell us here.</div>
-      <textarea rows="3" data-examcomment placeholder="e.g. Question 2 should mention the cold brew, and please add one about the serving ritual.">${brief._examComment||''}</textarea></div>
+      <textarea rows="3" data-examcomment placeholder="e.g. Question 2 should mention the cold brew, and please add one about the serving ritual.">${esc(brief._examComment||'')}</textarea></div>
     </div>`;
   }
   return intro + `<div class="internalbox"><div class="lbl">Draft preview</div>
@@ -1071,7 +1095,11 @@ document.addEventListener('click',e=>{
 // we fetch the verified, grounded document from Dispatch, rebuild the
 // applet model from it, and post the supplier's confirmations/edits back.
 // Without them the built-in Totality demo renders untouched.
-const DISPATCH_API = "https://dispatch.smallcircle.ai";
+/* Same-origin when the form is served from the Dispatch app itself
+   (corporate proxies mangle cross-origin preflights: live client
+   incident 2026-08-13). Absolute for the legacy GitHub Pages origin so
+   links already in the wild keep working unchanged. */
+const DISPATCH_API = (location.origin === "https://dispatch.smallcircle.ai") ? "" : "https://dispatch.smallcircle.ai";
 const _q = new URLSearchParams(location.search);
 const DBRIEF = _q.get("brief"), DTOKEN = _q.get("token");
 window.__dispatchMode = !!(DBRIEF && DTOKEN);
@@ -1405,9 +1433,11 @@ async function saveDraftNow(){
       if(r.status===409){ clearTimeout(draftTimer); draftTimer=null; }
     }
     else{ setSavedIndicator('error'); clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 5000); }
+    if(r.ok) noteNetOk();
   }catch(_e){
     if(!brief._submitted){
       setSavedIndicator('error');
+      if(_e instanceof TypeError || (_e && _e.name==='AbortError')) noteNetFail();
       clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow, 5000);
     }
   }finally{
