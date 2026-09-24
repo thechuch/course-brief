@@ -154,6 +154,24 @@
   .tlmeta{display:flex;gap:8px;align-items:center;margin-top:11px;flex-wrap:wrap}
   .chipmini{font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:20px;padding:4px 10px;display:inline-flex;gap:5px;align-items:center}
   .addrow{margin-top:14px}
+  /* editable timeline events + wine card facts (2026-09-24: client could not edit either) */
+  .ed{width:100%;font-family:inherit;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:9px;padding:8px 11px;line-height:1.5;letter-spacing:-.006em}
+  .ed:focus{outline:none;border-color:var(--ink);background:#fff}
+  .ed::placeholder{color:var(--faint)}
+  textarea.ed{resize:none;overflow:hidden}
+  .tlrow{display:grid;grid-template-columns:130px 1fr;gap:8px;margin-bottom:8px}
+  .tlrow .ed-date{font-size:12.5px;font-weight:700;color:var(--flare-deep);letter-spacing:.04em}
+  .tlrow .ed-title{font-size:15px;font-weight:600}
+  .tlbody textarea.ed{font-size:13.5px;color:var(--sub)}
+  .mini{font-size:12px;font-weight:600;background:none;border:1px solid var(--line);color:var(--sub);border-radius:999px;padding:5px 11px;cursor:pointer}
+  .mini:hover{border-color:var(--ink);color:var(--ink)}
+  .mini:disabled{opacity:.35;cursor:default}
+  .factsed{margin-top:10px;display:flex;flex-direction:column;gap:7px}
+  .factrow{display:grid;grid-template-columns:130px 1fr auto;gap:7px;align-items:start}
+  .factrow .ed-k{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--sub)}
+  .factrow .ed-v{font-size:13.5px}
+  .factsed .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  @media (max-width:600px){ .tlrow{grid-template-columns:1fr} .factrow{grid-template-columns:1fr auto} .factrow .ed-v{grid-column:1 / 2} }
 
   /* lineup product */
   .prod{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:19px;margin-top:16px;box-shadow:var(--sh);display:grid;grid-template-columns:120px 1fr;gap:19px}
@@ -613,7 +631,7 @@ function render(){
   else if(s.kind==='welcome') m=welcomeHTML();
   else{
     m=`<div class="eyebrow">Step ${cur-1} of ${brief.steps.length-2}</div><h1>${esc(s.nav)}</h1>`;
-    if(s.hint) m+=`<div class="sechint"><span class="ic">✎</span><div>${esc(s.hint)}</div></div>`;
+    if(s.hint) m+=`<div class="sechint"><span class="ic">✎</span><div>${esc(s.hint).replace(/&lt;(\/?)b&gt;/g,'<$1b>')}</div></div>`;
     const reviewables = s.kind==='fields' ? (s.fields||[]).filter(f=>(f.value||'').trim()&&f.state==='review')
       : s.kind==='lineup' ? s.products.filter(p=>p.state==='review')
       : s.kind==='selling' ? s.fb.filter(x=>x.state==='review')
@@ -738,16 +756,20 @@ function welcomeHTML(){
 }
 function storyHTML(s){
   let h=fieldCard(s.intro,'intro','story')+fieldCard(s.founder,'founder','story');
-  h+=`<h1 style="font-size:19px;margin:30px 0 2px">Brand timeline</h1><p class="lead" style="font-size:14px">This becomes an interactive timeline in your course. We drafted it from what you've shared: confirm each event or add your own.</p><div class="tl">`;
+  h+=`<h1 style="font-size:19px;margin:30px 0 2px">Brand timeline</h1><p class="lead" style="font-size:14px">This becomes an interactive timeline in your course. We drafted it from what you've shared: edit, reorder, or remove any event, and add your own.</p><div class="tl">`;
   s.timeline.forEach((t,i)=>{
     const last=i===s.timeline.length-1;
     h+=`<div class="tlitem ${t.state==='confirmed'?'confirmed':''}">
       <div class="tlnode"><div class="dot"></div>${last?'':'<div class="line"></div>'}</div>
       <div class="tlbody">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div class="tldate">${esc(t.date)}</div><div class="tltitle">${esc(t.title)}</div></div>${pill(t.state)}</div>
-        <div class="tldesc">${esc(t.desc)}</div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:6px">${pill(t.state)}</div>
+        <div class="tlrow"><input type="text" class="ed ed-date" data-tld="${i}" placeholder="Year or date" value="${esc(t.date)}" aria-label="Event date"><input type="text" class="ed ed-title" data-tlt="${i}" placeholder="What happened (a short title)" value="${esc(t.title)}" aria-label="Event title"></div>
+        <textarea rows="2" class="ed" data-tlx="${i}" placeholder="One or two sentences on why this moment matters." aria-label="Event description">${esc(t.desc)}</textarea>
         <div class="tlmeta"><span class="chipmini">${svgSource} photo: we'll source it</span>
           ${t.state==='confirmed'?`<button class="btn sm" data-tlunc="${i}">Edit</button>`:`<button class="btn ok sm" data-tlok="${i}">✓ Looks right</button>`}
+          <button type="button" class="mini" data-tlup="${i}" ${i===0?'disabled':''} aria-label="Move event up">↑</button>
+          <button type="button" class="mini" data-tldn="${i}" ${last?'disabled':''} aria-label="Move event down">↓</button>
+          <button type="button" class="mini" data-tlrm="${i}">Remove</button>
         </div>
       </div></div>`;
   });
@@ -795,7 +817,7 @@ function lineupHTML(s){
           <span class="why">i<span class="whytip">Every product gets one clear selling job so a rep always knows which bottle fits the moment. Open the menu to see what each role means, and change ours if it reads wrong.</span></span>
         </div>
         <div class="rolehint"><b>${esc(p.role)}</b> · ${roleHelp(p.role)}</div>
-        <ul class="facts">${p.facts.map(f=>`<li><span class="k">${esc(f[0])}</span>${esc(f[1])}</li>`).join('')}</ul>
+        <div class="factsed"><span class="lbl">Key facts</span>${p.facts.map((f,j)=>`<div class="factrow"><input type="text" class="ed ed-k" data-fk="${i}:${j}" placeholder="Label (e.g. Style)" value="${esc(f[0])}" aria-label="Fact label"><textarea rows="1" class="ed ed-v" data-fv="${i}:${j}" placeholder="The fact a rep can say out loud" aria-label="Fact">${esc(f[1])}</textarea><button type="button" class="mini" data-frm="${i}:${j}" aria-label="Remove this fact">Remove</button></div>`).join('')}<div><button type="button" class="mini" data-fadd="${i}">＋ Add a fact</button></div></div>
         <div class="pnotes"><label>Notes · describe it in your own words (optional)</label><textarea rows="2" data-pnotes="${i}" placeholder="What it is, when a rep should reach for it, anything the facts above miss...">${esc(p.notes||'')}</textarea></div>
         <div class="frow">${p.state==='confirmed'?`<button class="btn sm" data-punc="${i}">Edit</button>`:`<button class="btn ok sm" data-pok="${i}">✓ Looks right</button>`}</div>
       </div></div>`;
@@ -1027,8 +1049,12 @@ document.addEventListener('click',e=>{
   const fo=e.target.closest('[data-focus]'); if(fo){ const el=document.querySelector(`[data-edit="${fo.dataset.focus}"]`); if(el){el.focus();} return; }
   const am=e.target.closest('[data-am]'); if(am){ const [ctx,idx,mode]=am.dataset.am.split(':'); const f=getField(ctx+':'+idx); if(f){f._m=mode; if(mode==='up'||mode==='link'){f.state='needs';} render();} return; }
   const tok=e.target.closest('[data-tlok]'); if(tok){ brief.steps[cur].timeline[tok.dataset.tlok].state='confirmed'; toast('Event confirmed'); render(); return; }
-  const tun=e.target.closest('[data-tlunc]'); if(tun){ brief.steps[cur].timeline[tun.dataset.tlunc].state='review'; render(); return; }
-  if(e.target.closest('[data-addtl]')){ brief.steps[cur].timeline.push({date:"Year",title:"New event",desc:"Describe what happened...",state:"review"}); toast('Event added'); render(); return; }
+  const tun=e.target.closest('[data-tlunc]'); if(tun){ const i=tun.dataset.tlunc; brief.steps[cur].timeline[i].state='review'; render(); const el=document.querySelector(`[data-tlt="${i}"]`); if(el) el.focus(); return; }
+  if(e.target.closest('[data-addtl]')){ const tl=brief.steps[cur].timeline; tl.push({date:"",title:"",desc:"",state:"review",_cid:cbNewId('tl')}); render(); const el=document.querySelector(`[data-tld="${tl.length-1}"]`); if(el) el.focus(); return; }
+  const tmv=e.target.closest('[data-tlup],[data-tldn]'); if(tmv){ const tl=brief.steps[cur].timeline; const i=+(tmv.dataset.tlup??tmv.dataset.tldn); const j=tmv.dataset.tlup!=null?i-1:i+1; if(j>=0&&j<tl.length){ [tl[i],tl[j]]=[tl[j],tl[i]]; render(); } return; }
+  const trm=e.target.closest('[data-tlrm]'); if(trm){ brief.steps[cur].timeline.splice(+trm.dataset.tlrm,1); toast('Event removed'); render(); return; }
+  const fad=e.target.closest('[data-fadd]'); if(fad){ const pr=brief.steps[cur].products[fad.dataset.fadd]; pr.facts.push(["",""]); if(pr.state==='confirmed') pr.state='review'; render(); const el=document.querySelector(`[data-fk="${fad.dataset.fadd}:${pr.facts.length-1}"]`); if(el) el.focus(); return; }
+  const frm=e.target.closest('[data-frm]'); if(frm){ const [pi,fj]=frm.dataset.frm.split(':').map(Number); brief.steps[cur].products[pi].facts.splice(fj,1); render(); return; }
   const pok=e.target.closest('[data-pok]'); if(pok){ brief.steps[cur].products[pok.dataset.pok].state='confirmed'; toast('Product confirmed'); render(); return; }
   const pun=e.target.closest('[data-punc]'); if(pun){ brief.steps[cur].products[pun.dataset.punc].state='review'; render(); return; }
   const ch=e.target.closest('[data-chip]'); if(ch){
@@ -1054,6 +1080,11 @@ document.addEventListener('input',e=>{
   const rc=e.target.closest('[data-rolecustom]'); if(rc){ brief.steps[cur].products[rc.dataset.rolecustom].role=rc.value; return; }
   const ed=e.target.closest('[data-edit]'); if(ed){ const f=getField(ed.dataset.edit); if(f) f.value=ed.value; return; }
   const pn=e.target.closest('[data-pname]'); if(pn){ brief.steps[cur].products[pn.dataset.pname].name=pn.value; return; }
+  const tld=e.target.closest('[data-tld]'); if(tld){ brief.steps[cur].timeline[tld.dataset.tld].date=tld.value; return; }
+  const tlt=e.target.closest('[data-tlt]'); if(tlt){ brief.steps[cur].timeline[tlt.dataset.tlt].title=tlt.value; return; }
+  const tlx=e.target.closest('[data-tlx]'); if(tlx){ brief.steps[cur].timeline[tlx.dataset.tlx].desc=tlx.value; return; }
+  const fk=e.target.closest('[data-fk]'); if(fk){ const [pi,fj]=fk.dataset.fk.split(':').map(Number); brief.steps[cur].products[pi].facts[fj][0]=fk.value; return; }
+  const fv=e.target.closest('[data-fv]'); if(fv){ const [pi,fj]=fv.dataset.fv.split(':').map(Number); brief.steps[cur].products[pi].facts[fj][1]=fv.value; return; }
   const pnt=e.target.closest('[data-pnotes]'); if(pnt){ brief.steps[cur].products[pnt.dataset.pnotes].notes=pnt.value; return; }
   const ff=e.target.closest('[data-fbf]'); if(ff){ brief.steps[cur].fb[ff.dataset.fbf].f=ff.value; return; }
   const fb2=e.target.closest('[data-fbb]'); if(fb2){ brief.steps[cur].fb[fb2.dataset.fbb].b=fb2.value; return; }
@@ -1232,7 +1263,7 @@ function applyBackToDispatch(){
       s.timeline.forEach((t,i)=>{
         if(t._id){ const d = story.timeline.find(x=>x.id===t._id);
           if(d){ d.date=t.date; d.title=t.title; d.desc=t.desc; d.state=_stTo[t.state]||"prefilled"; kept.push(d); } }
-        else kept.push({ id:"tl_c"+(i+1), date:t.date, title:t.title, desc:t.desc,
+        else if(((t.date||"")+(t.title||"")+(t.desc||"")).trim()) kept.push({ id:t._cid||("tl_c"+(i+1)), date:(t.date||"").trim(), title:(t.title||"").trim(), desc:(t.desc||"").trim(),
           why:"Client-added timeline event", required:false,
           source:{label:"Provided by you", citations:[]}, state:"edited" });
       });
@@ -1250,18 +1281,21 @@ function applyBackToDispatch(){
       // Notes fold: set when the client typed something, DELETED when
       // they cleared it (a spread of the stored object would otherwise
       // resurrect stale notes forever).
+      // Facts post back as {k,v} objects (Firestore forbids nested arrays);
+      // a row with neither label nor text is an unfinished add, never saved.
+      const factsOut=(fs)=>(fs||[]).map(f=>Array.isArray(f)?{k:(f[0]||"").trim(),v:(f[1]||"").trim()}:{k:(f.k||"").trim(),v:(f.v||"").trim()}).filter(f=>f.k||f.v);
       const foldNotes=(entry,ap)=>{ const nt=(ap.notes||"").trim(); if(nt) entry.notes=nt; else delete entry.notes; return entry; };
       s.products.forEach(ap=>{
         if(ap._id){
           if(seen.has(ap._id)) return; // repairs a brief already corrupted by the old append bug
           const d=lineup.products.find(x=>x.id===ap._id);
-          if(d){ seen.add(ap._id); rebuilt.push(foldNotes({ ...d, name:(ap.name||"").trim()||d.name, role:ap.role, state:_stTo[ap.state]||d.state||"prefilled" }, ap)); }
+          if(d){ seen.add(ap._id); rebuilt.push(foldNotes({ ...d, name:(ap.name||"").trim()||d.name, role:ap.role, facts:factsOut(ap.facts), state:_stTo[ap.state]||d.state||"prefilled" }, ap)); }
         } else if(ap._cid && (ap.name||"").trim()){
           if(seen.has(ap._cid)) return;
           seen.add(ap._cid);
           const prior=lineup.products.find(x=>x.id===ap._cid);
           rebuilt.push(foldNotes({ ...(prior||{}), id:ap._cid, name:ap.name.trim(), role:ap.role||"DEFINE",
-            facts:(ap.facts||[]).map(f=>Array.isArray(f)?{k:f[0],v:f[1]}:f),
+            facts:factsOut(ap.facts),
             why:"Client-added product", required:false, source:{label:"Provided by you",citations:[]}, state:"edited" }, ap));
         }
       });
@@ -1359,7 +1393,7 @@ function snapshotState(){
     const cap=(k,f)=>{ rec[k]={v:f.value??null,s:f.state,sk:!!f._skipped}; };
     if(st.kind==='fields'){ rec.fields=st.fields.map(f=>({v:f.value,s:f.state,sk:!!f._skipped})); }
     if(st.kind==='story'){ cap('intro',st.intro); cap('founder',st.founder); rec.tl=st.timeline.map(t=>({d:t.date,t:t.title,x:t.desc,s:t.state})); }
-    if(st.kind==='lineup'){ if(st.intro)cap('intro',st.intro); rec.prods=st.products.map(p=>({n:p.name,r:p.role,s:p.state,nw:!!p._new,no:p.notes||''})); }
+    if(st.kind==='lineup'){ if(st.intro)cap('intro',st.intro); rec.prods=st.products.map(p=>({n:p.name,r:p.role,s:p.state,nw:!!p._new,no:p.notes||'',fa:p.facts})); }
     if(st.kind==='selling'){ rec.fb=st.fb.map(x=>({f:x.f,b:x.b,s:x.state,nw:!!x._new})); cap('awards',st.awards); if(st.channel)cap('channel',st.channel); }
     snap.steps[i]=rec;
   });
@@ -1376,8 +1410,8 @@ function restoreState(){
       const app=(f,d)=>{ if(!d)return; if(d.v!=null)f.value=d.v; if(d.s)f.state=d.s; if(d.sk)f._skipped=true; };
       if(st.kind==='fields'&&rec.fields) st.fields.forEach((f,j)=>app(f,rec.fields[j]));
       if(st.kind==='story'){ app(st.intro,rec.intro); app(st.founder,rec.founder);
-        (rec.tl||[]).forEach((d,j)=>{ if(st.timeline[j]){ st.timeline[j].date=d.d;st.timeline[j].title=d.t;st.timeline[j].desc=d.x;st.timeline[j].state=d.s; } else { st.timeline.push({date:d.d,title:d.t,desc:d.x,state:d.s}); } }); }
-      if(st.kind==='lineup'){ if(st.intro)app(st.intro,rec.intro); (rec.prods||[]).forEach((d,j)=>{ if(st.products[j]){ st.products[j].role=d.r;st.products[j].state=d.s; if(d.nw)st.products[j].name=d.n; if(d.no!=null)st.products[j].notes=d.no; } else { st.products.push({name:d.n,role:d.r,state:d.s,facts:[],notes:d.no||'',_new:true,_cid:cbNewId('p')}); } }); }
+        if(rec.tl) st.timeline.length=Math.min(st.timeline.length,rec.tl.length); (rec.tl||[]).forEach((d,j)=>{ if(st.timeline[j]){ st.timeline[j].date=d.d;st.timeline[j].title=d.t;st.timeline[j].desc=d.x;st.timeline[j].state=d.s; } else { st.timeline.push({date:d.d,title:d.t,desc:d.x,state:d.s}); } }); }
+      if(st.kind==='lineup'){ if(st.intro)app(st.intro,rec.intro); (rec.prods||[]).forEach((d,j)=>{ if(st.products[j]){ st.products[j].role=d.r;st.products[j].state=d.s; if(d.nw)st.products[j].name=d.n; if(d.no!=null)st.products[j].notes=d.no; if(Array.isArray(d.fa))st.products[j].facts=d.fa; } else { st.products.push({name:d.n,role:d.r,state:d.s,facts:Array.isArray(d.fa)?d.fa:[],notes:d.no||'',_new:true,_cid:cbNewId('p')}); } }); }
       if(st.kind==='selling'){ (rec.fb||[]).forEach((d,j)=>{ if(st.fb[j]){ st.fb[j].state=d.s; if(d.nw){st.fb[j].f=d.f;st.fb[j].b=d.b;} } else { st.fb.push({f:d.f,b:d.b,state:d.s,_new:true}); } }); app(st.awards,rec.awards); if(st.channel)app(st.channel,rec.channel); }
     });
     brief._examOk=snap.examOk; brief._examComment=snap.examComment; brief._stubNote=snap.stubNote; brief._assetNote=snap.assetNote||'';
